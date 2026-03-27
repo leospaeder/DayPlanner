@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day Planner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#f5f5f3;--bg-tertiary:#eeede8;
+  --text-primary:#1a1a18;--text-secondary:#5a5a56;--text-tertiary:#9a9a94;
+  --border-light:rgba(0,0,0,0.1);--border-mid:rgba(0,0,0,0.18);
+  --radius-md:8px;--radius-lg:12px;
+  --blue-bg:#E6F1FB;--blue-text:#0C447C;--blue-border:#378ADD;
+  --purple-bg:#EEEDFE;--purple-text:#3C3489;--purple-border:#534AB7;
+  --green-bg:#EAF3DE;--green-text:#27500A;--green-border:#639922;
+  --amber-bg:#FAEEDA;--amber-text:#633806;--amber-border:#EF9F27;
+  --red:#E24B4A;--red-bg:#FCEBEB;--red-text:#791F1F;
+  --success-bg:#EAF3DE;--success-text:#27500A;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg-primary:#1e1e1c;--bg-secondary:#2a2a28;--bg-tertiary:#242422;
+    --text-primary:#f0f0ec;--text-secondary:#a8a8a2;--text-tertiary:#6a6a64;
+    --border-light:rgba(255,255,255,0.08);--border-mid:rgba(255,255,255,0.14);
+    --blue-bg:#0c2a44;--blue-text:#85B7EB;
+    --purple-bg:#1e1a44;--purple-text:#AFA9EC;
+    --green-bg:#142a08;--green-text:#97C459;
+    --amber-bg:#2a1e04;--amber-text:#FAC775;
+    --red-bg:#2a0c0c;--red-text:#F09595;
+    --success-bg:#142a08;--success-text:#97C459;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-tertiary);color:var(--text-primary);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--bg-secondary);border-right:0.5px solid var(--border-light);display:flex;flex-direction:column;flex-shrink:0}
+.logo{font-size:15px;font-weight:600;padding:16px;border-bottom:0.5px solid var(--border-light);letter-spacing:-0.3px}
+.nav-section{padding:10px 0}
+.nav-label{font-size:10px;color:var(--text-tertiary);padding:0 14px 5px;text-transform:uppercase;letter-spacing:0.6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-radius:0;transition:background .1s}
+.nav-item:hover{background:var(--bg-primary);color:var(--text-primary)}
+.nav-item.active{background:var(--bg-primary);color:var(--text-primary);font-weight:500}
+.nav-item svg{flex-shrink:0;opacity:.7}
+.cal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sidebar-divider{height:0.5px;background:var(--border-light);margin:4px 0}
+.weather-sb{padding:12px 14px;margin-top:auto;border-top:0.5px solid var(--border-light)}
+.ws-temp{font-size:22px;font-weight:500}
+.ws-cond{font-size:11px;color:var(--text-secondary)}
+.ws-loc{font-size:10px;color:var(--text-tertiary);margin-bottom:7px}
+.ws-days{display:flex;flex-direction:column;gap:3px}
+.ws-day{display:flex;align-items:center;font-size:11px}
+.ws-dn{color:var(--text-secondary);width:30px}
+.ws-bar{flex:1;margin:0 6px;height:3px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden}
+.ws-fill{height:100%;border-radius:2px}
+.ws-hi{font-weight:500;width:26px;text-align:right;font-size:11px}
+.outfit-chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;margin-top:6px;background:var(--blue-bg);color:var(--blue-text)}
+
+/* Main area */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-sub{font-size:11px;color:var(--text-tertiary);margin-top:1px}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.badge{font-size:11px;padding:3px 9px;border-radius:10px}
+.badge-success{background:var(--success-bg);color:var(--success-text)}
+.badge-saving{background:var(--amber-bg);color:var(--amber-text)}
+.btn{background:var(--bg-primary);border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 12px;font-size:12px;font-weight:500;color:var(--text-primary);cursor:pointer;transition:background .1s}
+.btn:hover{background:var(--bg-secondary)}
+.content{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+
+/* Panel switching */
+.panel{display:none;flex-direction:column;gap:14px}
+.panel.active{display:flex}
+
+/* Section label */
+.sec-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat-card{background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px}
+.stat-val{font-size:22px;font-weight:500}
+.stat-lbl{font-size:11px;color:var(--text-tertiary);margin-top:1px}
+
+/* Tasks */
+.add-form{display:flex;gap:6px;align-items:center;padding:7px 10px;background:var(--bg-secondary);border:0.5px solid var(--border-light);border-radius:var(--radius-md);margin-bottom:8px}
+.add-form input{flex:1;border:none;background:transparent;font-size:12px;color:var(--text-primary);outline:none}
+.add-form input::placeholder{color:var(--text-tertiary)}
+.af-select{border:none;background:transparent;font-size:11px;color:var(--text-secondary);outline:none;cursor:pointer}
+.af-btn{background:var(--blue-border);border:none;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:500;color:white;cursor:pointer}
+.task-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-md);cursor:pointer;margin-bottom:5px;transition:border-color .1s}
+.task-row:hover{border-color:var(--border-mid)}
+.check{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--border-mid);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.check.done{background:#639922;border-color:#639922}
+.check.done::after{content:'';display:block;width:4px;height:6px;border:1.5px solid white;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
+.task-text{flex:1;font-size:12px}
+.task-text.done{text-decoration:line-through;color:var(--text-tertiary)}
+.tag{font-size:10px;padding:2px 6px;border-radius:8px;font-weight:500;white-space:nowrap}
+.tag-w{background:var(--blue-bg);color:var(--blue-text)}
+.tag-p{background:var(--green-bg);color:var(--green-text)}
+.tag-o{background:var(--amber-bg);color:var(--amber-text)}
+.tag-a{background:var(--purple-bg);color:var(--purple-text)}
+.pdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.ph{background:#E24B4A}.pm{background:#EF9F27}.pl{background:#639922}
+.del-btn{width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;opacity:0;transition:opacity .1s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.task-row:hover .del-btn{opacity:1}
+.del-btn:hover{color:var(--red);background:var(--red-bg)}
+
+/* Projects */
+.project-card{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:13px 15px;margin-bottom:10px;cursor:pointer;transition:border-color .1s}
+.project-card:hover{border-color:var(--border-mid)}
+.proj-header{display:flex;align-items:center;gap:9px}
+.proj-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.proj-name{flex:1;font-size:14px;font-weight:500}
+.proj-pct{font-size:12px;font-weight:500;color:var(--text-secondary)}
+.acct-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500}
+.ab-gcal{background:var(--blue-bg);color:var(--blue-text)}
+.ab-work{background:var(--blue-bg);color:var(--blue-text)}
+
+.proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 5px}
+.progress-track{height:5px;background:var(--bg-secondary);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s}
+.proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
+.proj-tasks.open{display:flex}
+.pt-row{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer}
+.pt-row:hover{background:var(--bg-tertiary)}
+.pt-check{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border-mid);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.pt-check.done{background:#639922;border-color:#639922}
+.pt-check.done::after{content:'';display:block;width:3px;height:5px;border:1.5px solid white;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
+.pt-text{flex:1;font-size:12px}
+.pt-text.done{text-decoration:line-through;color:var(--text-tertiary)}
+.pt-del{border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;padding:0 2px;opacity:0;transition:opacity .1s}
+.pt-row:hover .pt-del{opacity:1}
+.pt-del:hover{color:var(--red)}
+.add-pt{display:flex;gap:6px;margin-top:6px}
+.add-pt input{flex:1;border:0.5px solid var(--border-light);background:var(--bg-primary);border-radius:var(--radius-md);padding:5px 8px;font-size:12px;color:var(--text-primary);outline:none}
+.add-pt input:focus{border-color:var(--border-mid)}
+.add-pt input::placeholder{color:var(--text-tertiary)}
+.add-pt-btn{border:0.5px solid var(--border-mid);background:transparent;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:var(--text-secondary);cursor:pointer}
+.add-pt-btn:hover{background:var(--bg-secondary)}
+.new-proj-form{background:var(--bg-primary);border:0.5px dashed var(--border-mid);border-radius:var(--radius-lg);padding:14px 15px;display:none;flex-direction:column;gap:8px;margin-bottom:10px}
+.new-proj-form.open{display:flex}
+.nf-row{display:flex;gap:8px}
+.nf-input{flex:1;border:0.5px solid var(--border-light);background:var(--bg-secondary);border-radius:var(--radius-md);padding:6px 10px;font-size:12px;color:var(--text-primary);outline:none}
+.nf-input:focus{border-color:var(--border-mid)}
+.nf-input::placeholder{color:var(--text-tertiary)}
+.nf-select{border:0.5px solid var(--border-light);background:var(--bg-secondary);border-radius:var(--radius-md);padding:6px 8px;font-size:12px;color:var(--text-primary);outline:none}
+.nf-actions{display:flex;gap:6px;justify-content:flex-end}
+.nf-cancel{border:0.5px solid var(--border-light);background:transparent;border-radius:var(--radius-md);padding:5px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer}
+.nf-save{border:none;background:var(--blue-border);border-radius:var(--radius-md);padding:5px 12px;font-size:12px;font-weight:500;color:white;cursor:pointer}
+
+/* Week view */
+.week-header{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr));border-bottom:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0}
+.wh-spacer{border-right:0.5px solid var(--border-light)}
+.wh-day{padding:8px 6px 7px;text-align:center;border-right:0.5px solid var(--border-light)}
+.wh-day:last-child{border-right:none}
+.wh-name{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.3px}
+.wh-num{font-size:18px;font-weight:500;color:var(--text-secondary);line-height:1.2}
+.wh-num.today-num{color:white;background:var(--blue-border);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;margin:2px auto 0}
+.week-grid-scroll{flex:1;overflow-y:auto}
+.week-grid{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr))}
+.hr-label{font-size:10px;color:var(--text-tertiary);padding:3px 5px 0;text-align:right;border-right:0.5px solid var(--border-light);height:52px}
+.day-cell{border-right:0.5px solid var(--border-light);border-top:0.5px solid var(--border-light);height:52px;padding:2px 3px;cursor:pointer}
+.day-cell:last-child{border-right:none}
+.day-cell:hover{background:var(--bg-secondary)}
+.ev{border-radius:4px;padding:3px 5px;font-size:10px;overflow:hidden;margin-bottom:2px}
+.ev-t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-m{opacity:.7;font-size:9px}
+.ev-gcal{background:var(--blue-bg);border-left:2px solid var(--blue-border);border-radius:0 4px 4px 0}
+.ev-gcal .ev-t,.ev-gcal .ev-m{color:var(--blue-text)}
+
+.ev-task{background:var(--amber-bg);border-left:2px solid var(--amber-border);border-radius:0 4px 4px 0}
+.ev-task .ev-t,.ev-task .ev-m{color:var(--amber-text)}
+.now-marker{grid-column:1/-1;height:0;position:relative;pointer-events:none}
+.now-line{position:absolute;left:44px;right:0;height:1.5px;background:var(--red)}
+.now-dot{position:absolute;left:40px;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.now-lbl{position:absolute;left:0;top:-7px;width:40px;font-size:9px;color:var(--red-text);text-align:right;padding-right:3px}
+.week-legend{display:flex;gap:12px;padding:8px 16px;border-top:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-tertiary)}
+.leg-dot{width:8px;height:8px;border-radius:2px}
+
+
+
+/* Suggest btn */
+.suggest-btn{background:var(--bg-secondary);border:0.5px dashed var(--border-mid);border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;text-align:left;width:100%}
+.suggest-btn:hover{background:var(--bg-primary);color:var(--text-primary)}
+
+/* Today schedule */
+.timeline{display:flex;flex-direction:column;gap:2px}
+.hour-row{display:flex;min-height:52px}
+.hl{width:48px;font-size:10px;color:var(--text-tertiary);padding:4px 6px 0;text-align:right;flex-shrink:0;border-right:0.5px solid var(--border-light)}
+.hc{flex:1;border-top:0.5px solid var(--border-light);padding:3px 0 3px 8px;display:flex;flex-direction:column;gap:3px}
+.ev-block{border-radius:var(--radius-md);padding:5px 8px;margin-bottom:2px}
+.free-add{font-size:10px;color:var(--text-tertiary);font-style:italic;padding:4px 0;cursor:pointer}
+.free-add:hover{color:var(--text-secondary)}
+.today-now{height:1.5px;background:var(--red);position:relative;margin:2px 0 2px 48px}
+.now-dot2{width:7px;height:7px;border-radius:50%;background:var(--red);position:absolute;left:-3px;top:-3px}
+.now-t{font-size:9px;color:var(--red-text);position:absolute;left:8px;top:-7px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">Day Planner</div>
+    <div class="nav-section">
+      <div class="nav-label">Views</div>
+      <div class="nav-item active" onclick="switchPanel('today',this)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M10 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Today
+      </div>
+      <div class="nav-item" onclick="switchPanel('week',this)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12M5 5v8M9 5v8" stroke="currentColor" stroke-width="1.2"/></svg>
+        Week
+      </div>
+      <div class="nav-item" onclick="switchPanel('tasks',this)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        All tasks
+      </div>
+      <div class="nav-item" onclick="switchPanel('projects',this)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+        Projects
+      </div>
+
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="nav-section">
+      <div class="nav-label">Calendar</div>
+      <div class="nav-item"><span class="cal-dot" style="background:#378ADD"></span>leo.spaeder@gmail.com</div>
+      <div style="padding:4px 14px 8px;display:flex;flex-direction:column;gap:6px">
+        <button id="gcal-signin-btn" onclick="gcalSignIn()" style="background:var(--blue-border);border:none;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:white;cursor:pointer;width:100%">Sign in to Google</button>
+        <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
+      </div>
+    </div>
+    <div class="weather-sb" id="weather-sb">
+      <div class="ws-temp" id="w-temp">--°F</div>
+      <div class="ws-cond" id="w-cond">Loading...</div>
+      <div class="ws-loc" id="w-loc">Palo Alto, CA</div>
+      <div class="ws-days" id="w-days"></div>
+      <div class="outfit-chip" id="w-outfit">Fetching weather...</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Today</div>
+        <div class="topbar-sub" id="topbar-sub">Loading...</div>
+      </div>
+      <div class="topbar-actions">
+        <span class="badge" id="cal-badge" style="color:var(--text-tertiary)">Not signed in</span>
+        <span class="badge badge-success" id="save-badge">&#10003; Saved</span>
+        <button class="btn" id="action-btn" onclick="handleActionBtn()">+ Add task</button>
+      </div>
+    </div>
+
+    <!-- Week header (only shown in week view) -->
+    <div class="week-header" id="week-header" style="display:none">
+      <div class="wh-spacer"></div>
+      <div class="wh-day"><div class="wh-name">Mon</div><div class="wh-num">23</div></div>
+      <div class="wh-day"><div class="wh-name">Tue</div><div class="wh-num">24</div></div>
+      <div class="wh-day"><div class="wh-name">Wed</div><div class="wh-num">25</div></div>
+      <div class="wh-day"><div class="wh-name">Thu</div><div class="wh-num">26</div></div>
+      <div class="wh-day"><div class="wh-name">Fri</div><div class="wh-num today-num">27</div></div>
+    </div>
+
+    <div class="content" id="main-content">
+
+      <!-- TODAY -->
+      <div id="panel-today" class="panel active">
+        <div>
+          <div class="sec-label">Schedule</div>
+          <div class="timeline" id="today-timeline"></div>
+        </div>
+        <div>
+          <div class="sec-label">Priority tasks</div>
+          <div id="today-tasks"></div>
+          <button class="suggest-btn" onclick="switchPanel('tasks', document.querySelectorAll('.nav-item')[2])">Go to all tasks &rarr;</button>
+        </div>
+      </div>
+
+      <!-- WEEK (grid rendered separately, content area minimal) -->
+      <div id="panel-week" class="panel">
+        <div id="week-grid-wrap" style="display:none;flex:1;overflow-y:auto">
+          <div class="week-grid" id="week-grid"></div>
+        </div>
+        <div class="week-legend">
+          <div class="leg"><div class="leg-dot" style="background:#B5D4F4;border-left:2px solid #378ADD"></div>Google Calendar</div>
+          <div class="leg"><div class="leg-dot" style="background:#FAC775;border-left:2px solid #EF9F27"></div>Tasks due</div>
+        </div>
+      </div>
+
+      <!-- TASKS -->
+      <div id="panel-tasks" class="panel">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total tasks</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-open">0</div><div class="stat-lbl">Open</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-done">0</div><div class="stat-lbl">Completed</div></div>
+        </div>
+        <div>
+          <div class="sec-label">All tasks</div>
+          <div class="add-form">
+            <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+            <select class="af-select" id="new-task-tag">
+              <option value="w">Work</option><option value="p">Personal</option>
+              <option value="o">Ops</option><option value="a">Admin</option>
+            </select>
+            <select class="af-select" id="new-task-pri">
+              <option value="h">High</option><option value="m">Med</option><option value="l">Low</option>
+            </select>
+            <button class="af-btn" onclick="addTask()">Add</button>
+          </div>
+          <div id="task-list"></div>
+        </div>
+      </div>
+
+      <!-- PROJECTS -->
+      <div id="panel-projects" class="panel">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-val" id="sp-total">0</div><div class="stat-lbl">Projects</div></div>
+          <div class="stat-card"><div class="stat-val" id="sp-tasks">0</div><div class="stat-lbl">Total tasks</div></div>
+          <div class="stat-card"><div class="stat-val" id="sp-pct">0%</div><div class="stat-lbl">Overall done</div></div>
+        </div>
+        <div>
+          <div class="sec-label">Active projects</div>
+          <div class="new-proj-form" id="new-proj-form">
+            <div style="font-size:13px;font-weight:500">New project</div>
+            <div class="nf-row">
+              <input class="nf-input" id="nf-name" placeholder="Project name..." style="flex:2">
+              <select class="nf-select" id="nf-acct"><option value="gcal">Google Calendar</option></select>
+              <select class="nf-select" id="nf-color"><option value="#378ADD">Blue</option><option value="#534AB7">Purple</option><option value="#639922">Green</option><option value="#EF9F27">Amber</option><option value="#D85A30">Coral</option><option value="#1D9E75">Teal</option></select>
+            </div>
+            <div class="nf-actions">
+              <button class="nf-cancel" onclick="hideNewProjForm()">Cancel</button>
+              <button class="nf-save" onclick="createProject()">Create project</button>
+            </div>
+          </div>
+          <div id="proj-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Week grid scroll area lives outside .content when week is active -->
+  </div>
+</div>
+
+<script>
+// ─── Storage keys ───────────────────────────────────────────────────────────
+const TASK_KEY = 'dayplanner_tasks_v2';
+const PROJ_KEY = 'dayplanner_projects_v2';
+
+// ─── Default data ────────────────────────────────────────────────────────────
+const DEFAULT_TASKS = [
+  {id:1,text:'Review SgtMaj letter of continuity draft',tag:'w',pri:'h',done:false},
+  {id:2,text:'Send CIRRAS update to S3',tag:'w',pri:'m',done:true},
+  {id:3,text:'Research UniBw München requirements',tag:'p',pri:'m',done:false},
+  {id:4,text:'Submit travel request — next exercise',tag:'o',pri:'l',done:false},
+  {id:5,text:'EABO TTPs — Section 3 revisions',tag:'w',pri:'m',done:false},
+  {id:6,text:'Zeppelin University program comparison',tag:'p',pri:'l',done:false},
+];
+const DEFAULT_PROJECTS = [
+  {id:1,name:'EABO TTPs development',acct:'usmc',color:'#534AB7',expanded:false,tasks:[
+    {id:11,text:'Draft Section 1 — concept of operations',done:true},
+    {id:12,text:'Draft Section 3 — revisions',done:false},
+    {id:13,text:'Coordinate review with S3',done:true},
+    {id:14,text:'Final formatting and submission',done:false},
+  ]},
+  {id:2,name:'RESOLUTE DRAGON prep',acct:'usmc',color:'#378ADD',expanded:false,tasks:[
+    {id:21,text:'AAR prep — key lessons',done:false},
+    {id:22,text:'Logistics readiness brief',done:true},
+    {id:23,text:'Personnel accountability',done:true},
+    {id:24,text:'Equipment status report',done:false},
+    {id:25,text:'Coordinate with MLR S4',done:false},
+    {id:26,text:'Submit final AAR',done:false},
+  ]},
+  {id:3,name:'Doctoral program research',acct:'personal',color:'#639922',expanded:false,tasks:[
+    {id:31,text:'UniBw München — application requirements',done:false},
+    {id:32,text:'Zeppelin University — program comparison',done:false},
+    {id:33,text:'Request academic transcripts',done:false},
+  ]},
+  {id:4,name:'Battalion admin & continuity',acct:'work',color:'#EF9F27',expanded:false,tasks:[
+    {id:41,text:'SgtMaj letter of continuity — draft review',done:false},
+    {id:42,text:'CIRRAS update to S3',done:true},
+    {id:43,text:'Submit travel request',done:false},
+  ]},
+];
+
+const TAG_LABELS = {w:'Work',p:'Personal',o:'Ops',a:'Admin'};
+const TAG_CLASSES = {w:'tag-w',p:'tag-p',o:'tag-o',a:'tag-a'};
+const PRI_CLASSES = {h:'ph',m:'pm',l:'pl'};
+const ACCT_LABELS = {gcal:'Google Calendar',work:'Google Calendar',usmc:'Google Calendar',personal:'Google Calendar'};
+const ACCT_CLASSES = {gcal:'ab-gcal',work:'ab-gcal',usmc:'ab-gcal',personal:'ab-gcal'};
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let tasks = [], projects = [], nextTaskId = 200, nextProjId = 300, nextPtId = 500;
+let weatherData = null;
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function loadData() {
+  try { const d = JSON.parse(localStorage.getItem(TASK_KEY)); tasks = d.tasks; nextTaskId = d.nextId || 200; } catch(e) { tasks = DEFAULT_TASKS; }
+  try { const d = JSON.parse(localStorage.getItem(PROJ_KEY)); projects = d.projects; nextProjId = d.nextProjId || 300; nextPtId = d.nextPtId || 500; } catch(e) { projects = DEFAULT_PROJECTS; }
+}
+function saveData() {
+  setBadge('saving');
+  try {
+    localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId: nextTaskId}));
+    localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+    setBadge('saved');
+  } catch(e) { setBadge('error'); }
+}
+function setBadge(s) {
+  const b = document.getElementById('save-badge');
+  if(s==='saving'){b.textContent='Saving...';b.className='badge badge-saving';}
+  else if(s==='saved'){b.textContent='✓ All saved';b.className='badge badge-success';}
+  else {b.textContent='Error';b.className='badge';}
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pct(proj){return proj.tasks.length?Math.round(proj.tasks.filter(t=>t.done).length/proj.tasks.length*100):0;}
+
+// ─── Panel switching ──────────────────────────────────────────────────────────
+const TITLES = {today:'Today',week:'Week of March 23–29, 2026',tasks:'All tasks',projects:'Projects'};
+const SUBS = {today:'Friday, March 27 · leo.spaeder@gmail.com',week:'Mon–Fri · leo.spaeder@gmail.com',tasks:'Changes saved automatically',projects:'Changes saved automatically'};
+const ACTION_BTNS = {today:'+ Add task',week:'',tasks:'+ Add task',projects:'+ New project'};
+
+function switchPanel(name, el) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('topbar-title').textContent = TITLES[name]||name;
+  document.getElementById('topbar-sub').textContent = SUBS[name]||'';
+  const ab = document.getElementById('action-btn');
+  ab.textContent = ACTION_BTNS[name]||'';
+  ab.style.display = ACTION_BTNS[name] ? '' : 'none';
+  document.getElementById('week-header').style.display = name==='week'?'grid':'none';
+  currentPanel = name;
+  if(name==='week') buildWeekGrid();
+}
+
+function handleActionBtn() {
+  const active = document.querySelector('.panel.active');
+  const id = active ? active.id : '';
+  if(id==='panel-tasks') { document.getElementById('new-task-input').focus(); }
+  else if(id==='panel-projects') { showNewProjForm(); }
+  else { switchPanel('tasks', document.querySelectorAll('.nav-item')[2]); setTimeout(()=>document.getElementById('new-task-input').focus(),100); }
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+function renderTasks() {
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  const open = tasks.filter(t=>!t.done), done = tasks.filter(t=>t.done);
+  [...open,...done].forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'task-row';
+    row.innerHTML = `<div class="check${t.done?' done':''}" onclick="toggleTask(${t.id})"></div><div class="task-text${t.done?' done':''}">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||'Work'}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div><button class="del-btn" onclick="deleteTask(${t.id})">&#215;</button>`;
+    list.appendChild(row);
+  });
+  document.getElementById('st-total').textContent = tasks.length;
+  document.getElementById('st-open').textContent = open.length;
+  document.getElementById('st-done').textContent = done.length;
+  renderTodayTasks();
+}
+function toggleTask(id) { const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done;renderTasks();saveData();} }
+function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id);renderTasks();saveData(); }
+function addTask() {
+  const inp=document.getElementById('new-task-input'), text=inp.value.trim();
+  if(!text) return;
+  tasks.unshift({id:nextTaskId++,text,tag:document.getElementById('new-task-tag').value,pri:document.getElementById('new-task-pri').value,done:false});
+  inp.value=''; renderTasks(); saveData();
+}
+function renderTodayTasks() {
+  const el = document.getElementById('today-tasks');
+  if(!el) return;
+  el.innerHTML = '';
+  tasks.filter(t=>!t.done).slice(0,5).forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'task-row';
+    row.innerHTML = `<div class="check" onclick="toggleTask(${t.id})"></div><div class="task-text">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||'Work'}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div>`;
+    el.appendChild(row);
+  });
+}
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+function renderProjects() {
+  const list = document.getElementById('proj-list');
+  list.innerHTML = '';
+  let totalT=0, doneT=0;
+  projects.forEach(proj => {
+    totalT+=proj.tasks.length; doneT+=proj.tasks.filter(t=>t.done).length;
+    const p=pct(proj);
+    const card=document.createElement('div');
+    card.className='project-card';
+    const tasksHtml=proj.tasks.map(t=>`<div class="pt-row" onclick="togglePT(${proj.id},${t.id})"><div class="pt-check${t.done?' done':''}"></div><div class="pt-text${t.done?' done':''}">${esc(t.text)}</div><button class="pt-del" onclick="event.stopPropagation();deletePT(${proj.id},${t.id})">&#215;</button></div>`).join('');
+    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><span class="acct-badge ${ACCT_CLASSES[proj.acct]||'ab-work'}">${ACCT_LABELS[proj.acct]||'Work'}</span><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);transition:transform .2s"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
+    list.appendChild(card);
+  });
+  document.getElementById('sp-total').textContent=projects.length;
+  document.getElementById('sp-tasks').textContent=totalT;
+  document.getElementById('sp-pct').textContent=totalT?Math.round(doneT/totalT*100)+'%':'0%';
+}
+function toggleExpand(id){const p=projects.find(p=>p.id===id);if(p){p.expanded=!p.expanded;renderProjects();saveData();}}
+function togglePT(pid,tid){const p=projects.find(p=>p.id===pid);if(!p)return;const t=p.tasks.find(t=>t.id===tid);if(t){t.done=!t.done;renderProjects();saveData();}}
+function deletePT(pid,tid){const p=projects.find(p=>p.id===pid);if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();}}
+function addPT(pid){const inp=document.getElementById('pt-inp-'+pid);const text=inp?inp.value.trim():'';if(!text)return;const p=projects.find(p=>p.id===pid);if(p){p.tasks.push({id:nextPtId++,text,done:false});renderProjects();saveData();}}
+function showNewProjForm(){document.getElementById('new-proj-form').classList.add('open');document.getElementById('nf-name').focus();}
+function hideNewProjForm(){document.getElementById('new-proj-form').classList.remove('open');document.getElementById('nf-name').value='';}
+function createProject(){const name=document.getElementById('nf-name').value.trim();if(!name)return;const acct=document.getElementById('nf-acct').value,color=document.getElementById('nf-color').value;projects.unshift({id:nextProjId++,name,acct,color,expanded:true,tasks:[]});hideNewProjForm();renderProjects();saveData();}
+
+// ─── Today timeline ───────────────────────────────────────────────────────────
+const TODAY_HOURS = [7,8,9,10,11,12,13,14,15,16,17];
+
+function buildTodayTimeline() {
+  const tl = document.getElementById('today-timeline');
+  if(!tl) return;
+  tl.innerHTML = '';
+  const now = new Date();
+  const nowH = now.getHours(), nowM = now.getMinutes();
+  const todayEvs = getEventsForDay(now);
+  let nowInserted = false;
+
+  TODAY_HOURS.forEach(h => {
+    const row = document.createElement('div');
+    row.className = 'hour-row';
+    const lbl = document.createElement('div');
+    lbl.className = 'hl';
+    lbl.textContent = h<=11?h+' AM':(h===12?'12 PM':(h-12)+' PM');
+    const col = document.createElement('div');
+    col.className = 'hc';
+
+    const evs = todayEvs.filter(e => {
+      if(!e.start.dateTime) return false;
+      return new Date(e.start.dateTime).getHours() === h;
+    });
+
+    if(evs.length) {
+      evs.forEach(e => {
+        const d = document.createElement('div');
+        d.className = 'ev-block ev-gcal';
+        d.innerHTML = `<div class="ev-t">${esc(e.summary||'(no title)')}</div><div class="ev-m">${fmtRange(e.start,e.end)}</div>`;
+        col.appendChild(d);
+      });
+    } else {
+      const free = document.createElement('div');
+      free.className = 'free-add';
+      free.textContent = '+ Free';
+      col.appendChild(free);
+    }
+
+    row.appendChild(lbl); row.appendChild(col);
+
+    if(h === nowH && !nowInserted) {
+      nowInserted = true;
+      tl.appendChild(row);
+      const nowEl = document.createElement('div');
+      nowEl.className = 'today-now';
+      const fmtNow = nowH>12?(nowH-12)+':'+String(nowM).padStart(2,'0')+' PM':nowH+':'+String(nowM).padStart(2,'0')+' AM';
+      nowEl.innerHTML = `<div class="now-dot2"></div><span class="now-t">${fmtNow}</span>`;
+      tl.appendChild(nowEl);
+    } else {
+      tl.appendChild(row);
+    }
+  });
+}
+
+// ─── Google Calendar OAuth ────────────────────────────────────────────────────
+const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+let gcalToken = null;
+let calendarEvents = [];
+
+function gcalSignIn() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope: GCAL_SCOPE,
+    callback: async (resp) => {
+      if(resp.error) { console.error(resp); return; }
+      gcalToken = resp.access_token;
+      localStorage.setItem('gcal_token', gcalToken);
+      document.getElementById('gcal-signin-btn').style.display = 'none';
+      document.getElementById('gcal-signout-btn').style.display = '';
+      updateCalBadge('syncing');
+      await fetchCalendarEvents();
+    }
+  });
+  client.requestAccessToken();
+}
+
+function gcalSignOut() {
+  google.accounts.oauth2.revoke(gcalToken, () => {});
+  gcalToken = null;
+  localStorage.removeItem('gcal_token');
+  calendarEvents = [];
+  document.getElementById('gcal-signin-btn').style.display = '';
+  document.getElementById('gcal-signout-btn').style.display = 'none';
+  updateCalBadge('signed-out');
+  buildTodayTimeline();
+  buildWeekGrid();
+}
+
+function updateCalBadge(state) {
+  const b = document.getElementById('cal-badge');
+  if(state==='synced'){ b.textContent='✓ Calendar synced'; b.className='badge badge-success'; }
+  else if(state==='syncing'){ b.textContent='Syncing...'; b.className='badge badge-saving'; }
+  else if(state==='error'){ b.textContent='Calendar error'; b.className='badge'; }
+  else { b.textContent='Not signed in'; b.className='badge'; b.style.color='var(--text-tertiary)'; }
+}
+
+async function fetchCalendarEvents() {
+  if(!gcalToken) return;
+  try {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+    weekStart.setHours(0,0,0,0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${weekStart.toISOString()}&timeMax=${weekEnd.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${gcalToken}` } });
+    if(res.status === 401) { gcalSignOut(); return; }
+    const data = await res.json();
+    calendarEvents = (data.items || []).filter(e => e.start && (e.start.dateTime || e.start.date));
+    updateCalBadge('synced');
+    buildTodayTimeline();
+    buildWeekGrid();
+  } catch(e) {
+    updateCalBadge('error');
+  }
+}
+
+function getEventsForDay(date) {
+  const dayStr = date.toISOString().split('T')[0];
+  return calendarEvents.filter(e => {
+    const start = e.start.dateTime ? new Date(e.start.dateTime) : new Date(e.start.date+'T00:00:00');
+    return start.toISOString().split('T')[0] === dayStr;
+  });
+}
+
+function fmtTime(dt) {
+  const d = new Date(dt);
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return m === 0 ? `${h} ${ampm}` : `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function fmtRange(start, end) {
+  if(!start.dateTime) return 'All day';
+  const s = fmtTime(start.dateTime);
+  const e = end?.dateTime ? fmtTime(end.dateTime) : '';
+  return e ? `${s}–${e}` : s;
+}
+
+// ─── Week grid ────────────────────────────────────────────────────────────────
+const WEEK_HOURS=[{l:'7 AM',h:7},{l:'8 AM',h:8},{l:'9 AM',h:9},{l:'10 AM',h:10},{l:'11 AM',h:11},{l:'12 PM',h:12},{l:'1 PM',h:13},{l:'2 PM',h:14},{l:'3 PM',h:15},{l:'4 PM',h:16},{l:'5 PM',h:17}];
+
+function buildWeekGrid(){
+  const grid=document.getElementById('week-grid');
+  grid.innerHTML='';
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  monday.setHours(0,0,0,0);
+
+  // Update week header dates
+  const wh = document.getElementById('week-header');
+  if(wh) {
+    const dayNames=['Mon','Tue','Wed','Thu','Fri'];
+    const cells = wh.querySelectorAll('.wh-day');
+    cells.forEach((cell,i) => {
+      const d = new Date(monday); d.setDate(monday.getDate()+i);
+      const isToday = d.toDateString()===now.toDateString();
+      cell.querySelector('.wh-name').textContent = dayNames[i];
+      const numEl = cell.querySelector('.wh-num');
+      numEl.textContent = d.getDate();
+      numEl.className = 'wh-num' + (isToday?' today-num':'');
+    });
+  }
+
+  const nowH = now.getHours(), nowM = now.getMinutes();
+
+  WEEK_HOURS.forEach(hr=>{
+    const lbl=document.createElement('div');lbl.className='hr-label';lbl.textContent=hr.l;grid.appendChild(lbl);
+    for(let d=0;d<5;d++){
+      const cell=document.createElement('div');cell.className='day-cell';
+      const dayDate = new Date(monday); dayDate.setDate(monday.getDate()+d);
+      const dayEvs = getEventsForDay(dayDate).filter(e=>{
+        if(!e.start.dateTime) return hr.h===0;
+        return new Date(e.start.dateTime).getHours()===hr.h;
+      });
+      dayEvs.forEach(e=>{
+        const div=document.createElement('div');div.className='ev ev-gcal';
+        const range=fmtRange(e.start,e.end);
+        div.innerHTML=`<div class="ev-t">${esc(e.summary||'(no title)')}</div><div class="ev-m">${range}</div>`;
+        cell.appendChild(div);
+      });
+      grid.appendChild(cell);
+    }
+    if(hr.h===nowH){
+      const nowMarker=document.createElement('div');nowMarker.className='now-marker';
+      const pct=nowM/60;
+      nowMarker.style.cssText='grid-column:1/-1;height:0;position:relative;pointer-events:none;margin-top:'+Math.round(pct*52)+'px';
+      nowMarker.innerHTML='<div class="now-line"></div><div class="now-dot"></div><div class="now-lbl">'+fmtTime(now.toISOString())+'</div>';
+      grid.appendChild(nowMarker);
+    }
+  });
+}
+
+// ─── Weather ──────────────────────────────────────────────────────────────────
+async function fetchWeatherForCoords(lat, lon, locationName){
+  try {
+    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Los_Angeles';
+    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&forecast_days=5`);
+    const d=await res.json();
+    weatherData=d;
+    const curr=Math.round(d.current.temperature_2m);
+    const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',63:'Rain',71:'Light snow',80:'Rain showers',95:'Thunderstorm'};
+    document.getElementById('w-temp').textContent=curr+'°F';
+    document.getElementById('w-cond').textContent=condMap[d.current.weathercode]||'Cloudy';
+    document.getElementById('w-loc').textContent=locationName;
+    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const highs=d.daily.temperature_2m_max, dates=d.daily.time, maxH=Math.max(...highs);
+    const daysEl=document.getElementById('w-days');
+    daysEl.innerHTML='';
+    highs.slice(0,4).forEach((h,i)=>{
+      const dn=dayNames[new Date(dates[i]+'T12:00:00').getDay()];
+      const w=Math.round(h/maxH*100), color=h>=75?'#378ADD':h>=65?'#639922':'#EF9F27';
+      daysEl.innerHTML+=`<div class="ws-day"><span class="ws-dn">${dn}</span><div class="ws-bar"><div class="ws-fill" style="width:${w}%;background:${color}"></div></div><span class="ws-hi">${Math.round(h)}°</span></div>`;
+    });
+    const hi=Math.round(highs[0]);
+    const outfit=hi>=80?'Short sleeves, no jacket':hi>=70?'T-shirt + light layer':hi>=60?'Light jacket':'Jacket recommended';
+    document.getElementById('w-outfit').textContent='Today: '+outfit;
+  } catch(e){
+    document.getElementById('w-cond').textContent='Weather unavailable';
+    document.getElementById('w-outfit').textContent='Check weather manually';
+  }
+}
+
+async function reverseGeocode(lat, lon){
+  try {
+    const res=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+    const d=await res.json();
+    const city=d.address.city||d.address.town||d.address.village||d.address.county||'Your location';
+    const state=d.address.state_code||d.address.state||'';
+    return state?`${city}, ${state}`:city;
+  } catch(e){ return 'Your location'; }
+}
+
+async function fetchWeather(){
+  if(navigator.geolocation){
+    document.getElementById('w-loc').textContent='Locating...';
+    navigator.geolocation.getCurrentPosition(
+      async pos=>{
+        const {latitude:lat,longitude:lon}=pos.coords;
+        const name=await reverseGeocode(lat,lon);
+        fetchWeatherForCoords(lat,lon,name);
+      },
+      ()=>{ fetchWeatherForCoords(37.4419,-122.1430,'Palo Alto, CA'); },
+      {timeout:6000}
+    );
+  } else {
+    fetchWeatherForCoords(37.4419,-122.1430,'Palo Alto, CA');
+  }
+}
+
+// ─── Date/time in topbar ──────────────────────────────────────────────────────
+function setTopbarDate(){
+  const now=new Date();
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('topbar-sub').textContent=`${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()} · leo.spaeder@gmail.com`;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadData();
+renderTasks();
+renderProjects();
+buildTodayTimeline();
+buildWeekGrid();
+setTopbarDate();
+fetchWeather();
+document.getElementById('action-btn').style.display='';
+
+// Refresh now-line every minute
+setInterval(()=>{ buildTodayTimeline(); buildWeekGrid(); }, 60000);
+
+// Try to restore previous Google session token
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('gcal_token');
+  if(saved) {
+    gcalToken = saved;
+    document.getElementById('gcal-signin-btn').style.display = 'none';
+    document.getElementById('gcal-signout-btn').style.display = '';
+    updateCalBadge('syncing');
+    fetchCalendarEvents().catch(()=>{ gcalSignOut(); });
+  }
+});
+</script>
+</body>
+</html>
