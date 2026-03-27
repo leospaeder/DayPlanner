@@ -118,7 +118,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ab-gcal{background:var(--blue-bg);color:var(--blue-text)}
 .ab-work{background:var(--blue-bg);color:var(--blue-text)}
 
-.proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 5px}
+.proj-del-btn{width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;opacity:0;transition:opacity .1s;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:2px}
+.project-card:hover .proj-del-btn{opacity:1}
+.proj-del-btn:hover{color:var(--red);background:var(--red-bg)}
 .progress-track{height:5px;background:var(--bg-secondary);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
@@ -503,13 +505,14 @@ function renderProjects() {
     const card=document.createElement('div');
     card.className='project-card';
     const tasksHtml=proj.tasks.map(t=>`<div class="pt-row" onclick="togglePT(${proj.id},${t.id})"><div class="pt-check${t.done?' done':''}"></div><div class="pt-text${t.done?' done':''}">${esc(t.text)}</div><button class="pt-del" onclick="event.stopPropagation();deletePT(${proj.id},${t.id})">&#215;</button></div>`).join('');
-    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><span class="acct-badge ${ACCT_CLASSES[proj.acct]||'ab-work'}">${ACCT_LABELS[proj.acct]||'Work'}</span><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);transition:transform .2s"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
+    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><span class="acct-badge ${ACCT_CLASSES[proj.acct]||'ab-work'}">${ACCT_LABELS[proj.acct]||'Work'}</span><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);transition:transform .2s"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})" title="Delete project">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
     list.appendChild(card);
   });
   document.getElementById('sp-total').textContent=projects.length;
   document.getElementById('sp-tasks').textContent=totalT;
   document.getElementById('sp-pct').textContent=totalT?Math.round(doneT/totalT*100)+'%':'0%';
 }
+function deleteProject(id){if(!confirm('Delete this project and all its tasks?'))return;projects=projects.filter(p=>p.id!==id);renderProjects();saveData();}
 function toggleExpand(id){const p=projects.find(p=>p.id===id);if(p){p.expanded=!p.expanded;renderProjects();saveData();}}
 function togglePT(pid,tid){const p=projects.find(p=>p.id===pid);if(!p)return;const t=p.tasks.find(t=>t.id===tid);if(t){t.done=!t.done;renderProjects();saveData();}}
 function deletePT(pid,tid){const p=projects.find(p=>p.id===pid);if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();}}
