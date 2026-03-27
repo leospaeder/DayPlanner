@@ -207,7 +207,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
 <div class="app">
@@ -627,34 +627,47 @@ const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googl
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 let gcalToken = null;
 let calendarEvents = [];
+let tokenClient = null;
 
-function gcalSignIn() {
-  const client = google.accounts.oauth2.initTokenClient({
+function initGoogleAuth() {
+  if(typeof google === 'undefined' || !google.accounts) {
+    setTimeout(initGoogleAuth, 500);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GCAL_CLIENT_ID,
     scope: GCAL_SCOPE,
     callback: async (resp) => {
-      if(resp.error) { console.error(resp); return; }
+      if(resp.error) {
+        updateCalBadge('error');
+        alert('Google sign-in failed: ' + (resp.error_description || resp.error));
+        return;
+      }
       gcalToken = resp.access_token;
-      localStorage.setItem('gcal_token', gcalToken);
       document.getElementById('gcal-signin-btn').style.display = 'none';
       document.getElementById('gcal-signout-btn').style.display = '';
       updateCalBadge('syncing');
       await fetchCalendarEvents();
     }
   });
-  client.requestAccessToken();
+}
+
+function gcalSignIn() {
+  if(!tokenClient) {
+    alert('Google auth is still loading. Please wait a moment and try again.');
+    return;
+  }
+  tokenClient.requestAccessToken({prompt: 'consent'});
 }
 
 function gcalSignOut() {
-  google.accounts.oauth2.revoke(gcalToken, () => {});
+  if(gcalToken) google.accounts.oauth2.revoke(gcalToken, ()=>{});
   gcalToken = null;
-  localStorage.removeItem('gcal_token');
   calendarEvents = [];
   document.getElementById('gcal-signin-btn').style.display = '';
   document.getElementById('gcal-signout-btn').style.display = 'none';
   updateCalBadge('signed-out');
   buildTodayTimeline();
-  buildWeekGrid();
 }
 
 function updateCalBadge(state) {
@@ -670,7 +683,7 @@ async function fetchCalendarEvents() {
   try {
     const now = new Date();
     const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1); // Monday
+    weekStart.setDate(now.getDate() - ((now.getDay()+6)%7)); // Monday
     weekStart.setHours(0,0,0,0);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
@@ -678,18 +691,20 @@ async function fetchCalendarEvents() {
     const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${weekStart.toISOString()}&timeMax=${weekEnd.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${gcalToken}` } });
     if(res.status === 401) { gcalSignOut(); return; }
+    if(!res.ok) { updateCalBadge('error'); return; }
     const data = await res.json();
     calendarEvents = (data.items || []).filter(e => e.start && (e.start.dateTime || e.start.date));
     updateCalBadge('synced');
     buildTodayTimeline();
-    // If week panel is open, show grid and rebuild
     const weekPrompt = document.getElementById('week-signin-prompt');
     const weekScroll = document.getElementById('week-grid-scroll');
     if(weekPrompt) weekPrompt.style.display = 'none';
     if(weekScroll) weekScroll.style.display = '';
+    buildWeekWeatherBanner();
     buildWeekGrid();
   } catch(e) {
     updateCalBadge('error');
+    console.error('Calendar fetch error:', e);
   }
 }
 
@@ -917,25 +932,13 @@ loadData();
 renderTasks();
 renderProjects();
 buildTodayTimeline();
-buildWeekGrid();
 setTopbarDate();
 fetchWeather();
+initGoogleAuth();
 document.getElementById('action-btn').style.display='';
 
 // Refresh now-line every minute
-setInterval(()=>{ buildTodayTimeline(); buildWeekGrid(); }, 60000);
-
-// Try to restore previous Google session token
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('gcal_token');
-  if(saved) {
-    gcalToken = saved;
-    document.getElementById('gcal-signin-btn').style.display = 'none';
-    document.getElementById('gcal-signout-btn').style.display = '';
-    updateCalBadge('syncing');
-    fetchCalendarEvents().catch(()=>{ gcalSignOut(); });
-  }
-});
+setInterval(()=>{ buildTodayTimeline(); }, 60000);
 </script>
 </body>
 </html>
