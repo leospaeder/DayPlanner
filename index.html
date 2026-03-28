@@ -258,6 +258,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   <!-- ── TODAY VIEW ── -->
   <div id="view-today" class="view active">
+    <!-- Day nav bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-primary);border-bottom:0.5px solid var(--border-light);flex-shrink:0">
+      <div style="display:flex;gap:6px">
+        <button onclick="changeDay(-1)" class="btn" style="padding:4px 10px;font-size:12px">&#8592; Prev</button>
+        <button onclick="changeDay(0)" class="btn" style="padding:4px 10px;font-size:12px">Today</button>
+        <button onclick="changeDay(1)" class="btn" style="padding:4px 10px;font-size:12px">Next &#8594;</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-tertiary)" id="today-date-label"></div>
+    </div>
     <div class="scroll-content">
       <div>
         <div class="sec-label">Schedule</div>
@@ -422,6 +431,7 @@ let calEvents = [];
 let tokenClient = null;
 let currentView = 'today';
 let weekOffset = 0; // 0 = current week, -1 = last week, +1 = next week
+let dayOffset = 0;  // 0 = today, -1 = yesterday, +1 = tomorrow
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -493,12 +503,13 @@ function showView(name, navEl){
 
   const now = new Date();
   const titles = {
-    today: `Today — ${DAY_NAMES[now.getDay()]}, ${MONTH_SHORT[now.getMonth()]} ${now.getDate()}`,
+    today: '',  // set by updateTodayTitle
     week: weekTitle(),
     tasks: 'All tasks',
     projects: 'Projects',
   };
-  document.getElementById('topbar-title').textContent = titles[name]||name;
+  if(name==='today'){ updateTodayTitle(); }
+  else { document.getElementById('topbar-title').textContent = titles[name]||name; }
   document.getElementById('topbar-sub').textContent = 'leo.spaeder@gmail.com';
 
   const ab = document.getElementById('action-btn');
@@ -508,6 +519,17 @@ function showView(name, navEl){
 
   if(name==='week'){ buildWeekView(); }
   if(name==='today'){ buildTodayTimeline(); }
+}
+
+function updateTodayTitle(){
+  const d=getViewDate(), now=new Date(); now.setHours(0,0,0,0);
+  const isToday=d.toDateString()===now.toDateString();
+  const isTomorrow=dayOffset===1, isYesterday=dayOffset===-1;
+  const prefix=isToday?'Today':isYesterday?'Yesterday':isTomorrow?'Tomorrow':DAY_NAMES[d.getDay()];
+  const full=`${prefix} — ${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+  document.getElementById('topbar-title').textContent=full;
+  const lbl=document.getElementById('today-date-label');
+  if(lbl) lbl.textContent=isToday?'':new Date(d).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 }
 
 function weekTitle(){
@@ -521,18 +543,36 @@ function handleActionBtn(){
   else if(currentView==='projects') showNewProjForm();
 }
 
+function getViewDate(){
+  const d=new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate()+dayOffset);
+  return d;
+}
+
+function changeDay(dir){
+  if(dir===0) dayOffset=0;
+  else dayOffset+=dir;
+  buildTodayTimeline();
+  updateTodayTitle();
+  if(gcalToken) fetchCalendarEventsForDay();
+}
+
 // ─── Today timeline ───────────────────────────────────────────────────────────
 function buildTodayTimeline(){
   const tl=document.getElementById('today-timeline');
   if(!tl) return;
   tl.innerHTML='';
-  const now=new Date(), nowH=now.getHours(), nowM=now.getMinutes();
-  const todayEvs=eventsForDay(now);
-  const hours=[6,7,8,9,10,11,12,13,14,15,16,17,18];
+  const now=new Date();
+  const viewDate=getViewDate();
+  const isToday=dayOffset===0;
+  const nowH=now.getHours(), nowM=now.getMinutes();
+  const dayEvs=eventsForDay(viewDate);
+  const hours=[6,7,8,9,10,11,12,13,14,15,16,17,18,19];
   let nowDrawn=false;
 
   hours.forEach(h=>{
-    if(h===nowH && !nowDrawn){
+    // Insert now-line only on today
+    if(isToday && h===nowH && !nowDrawn){
       nowDrawn=true;
       const bar=document.createElement('div');
       bar.className='now-bar';
@@ -543,7 +583,7 @@ function buildTodayTimeline(){
     const row=document.createElement('div'); row.className='t-row';
     const lbl=document.createElement('div'); lbl.className='t-label'; lbl.textContent=fmtHour(h);
     const col=document.createElement('div'); col.className='t-col';
-    const evs=todayEvs.filter(e=>{
+    const evs=dayEvs.filter(e=>{
       if(!e.start.dateTime) return false;
       return new Date(e.start.dateTime).getHours()===h;
     });
@@ -799,6 +839,29 @@ function gcalSignOut(){
   updateCalBadge('signed-out');
   buildTodayTimeline();
   if(currentView==='week') showWeekNoCal();
+}
+
+async function fetchCalendarEventsForDay(){
+  if(!gcalToken) return;
+  try{
+    const viewDate=getViewDate();
+    const start=new Date(viewDate); start.setHours(0,0,0,0);
+    const end=new Date(viewDate); end.setHours(23,59,59,999);
+    const url=`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
+    const res=await fetch(url,{headers:{Authorization:`Bearer ${gcalToken}`}});
+    if(res.status===401){ gcalSignOut(); return; }
+    if(!res.ok) return;
+    const data=await res.json();
+    // Merge into calEvents — remove old entries for this day then add new
+    const ds=viewDate.toISOString().split('T')[0];
+    calEvents=calEvents.filter(e=>{
+      const s=e.start.dateTime?new Date(e.start.dateTime):new Date(e.start.date+'T00:00:00');
+      return s.toISOString().split('T')[0]!==ds;
+    });
+    const newEvs=(data.items||[]).filter(e=>e.start&&(e.start.dateTime||e.start.date));
+    calEvents=[...calEvents,...newEvs];
+    buildTodayTimeline();
+  }catch(e){ console.error('Day fetch error:',e); }
 }
 
 async function fetchCalendarEventsForWeek(){
