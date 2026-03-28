@@ -124,10 +124,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-drag:active{cursor:grabbing}
 .project-card.proj-dragging{opacity:.4}
 .project-card.proj-drag-over{border-top:2px solid var(--blue-border)}
-.proj-status-btn:hover{background:var(--bg-secondary)}
-.status-active{background:var(--success-bg);color:var(--success-text);border-color:var(--green-border)}
-.status-inactive{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}
-.status-archived{background:var(--bg-secondary);color:var(--text-tertiary);border-color:var(--border-mid)}
+.proj-status-btn{font-size:10px;padding:2px 6px;border-radius:8px;font-weight:500;white-space:nowrap;border:none;cursor:pointer}
+.proj-status-btn:hover{opacity:.85}
+.status-active{background:var(--success-bg);color:var(--success-text)}
+.status-inactive{background:var(--amber-bg);color:var(--amber-text)}
+.status-archived{background:var(--bg-secondary);color:var(--text-tertiary)}
 .proj-section-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;margin:12px 0 6px;padding-bottom:4px;border-bottom:0.5px solid var(--border-light)}
 .proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 3px}
 .proj-due-row{font-size:11px;color:var(--text-tertiary);margin-bottom:5px;display:flex;align-items:center;gap:5px}
