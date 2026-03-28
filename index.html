@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Day Planner</title>
+<script src="https://accounts.google.com/gsi/client"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -12,40 +13,39 @@
   --border-light:rgba(0,0,0,0.1);--border-mid:rgba(0,0,0,0.18);
   --radius-md:8px;--radius-lg:12px;
   --blue-bg:#E6F1FB;--blue-text:#0C447C;--blue-border:#378ADD;
-  --purple-bg:#EEEDFE;--purple-text:#3C3489;--purple-border:#534AB7;
+  --purple-bg:#EEEDFE;--purple-text:#3C3489;
   --green-bg:#EAF3DE;--green-text:#27500A;--green-border:#639922;
   --amber-bg:#FAEEDA;--amber-text:#633806;--amber-border:#EF9F27;
   --red:#E24B4A;--red-bg:#FCEBEB;--red-text:#791F1F;
   --success-bg:#EAF3DE;--success-text:#27500A;
 }
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg-primary:#1e1e1c;--bg-secondary:#2a2a28;--bg-tertiary:#242422;
-    --text-primary:#f0f0ec;--text-secondary:#a8a8a2;--text-tertiary:#6a6a64;
-    --border-light:rgba(255,255,255,0.08);--border-mid:rgba(255,255,255,0.14);
-    --blue-bg:#0c2a44;--blue-text:#85B7EB;
-    --purple-bg:#1e1a44;--purple-text:#AFA9EC;
-    --green-bg:#142a08;--green-text:#97C459;
-    --amber-bg:#2a1e04;--amber-text:#FAC775;
-    --red-bg:#2a0c0c;--red-text:#F09595;
-    --success-bg:#142a08;--success-text:#97C459;
-  }
-}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-tertiary);color:var(--text-primary);height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.app{display:flex;height:100vh;overflow:hidden}
+@media(prefers-color-scheme:dark){:root{
+  --bg-primary:#1e1e1c;--bg-secondary:#2a2a28;--bg-tertiary:#242422;
+  --text-primary:#f0f0ec;--text-secondary:#a8a8a2;--text-tertiary:#6a6a64;
+  --border-light:rgba(255,255,255,0.08);--border-mid:rgba(255,255,255,0.14);
+  --blue-bg:#0c2a44;--blue-text:#85B7EB;
+  --purple-bg:#1e1a44;--purple-text:#AFA9EC;
+  --green-bg:#142a08;--green-text:#97C459;
+  --amber-bg:#2a1e04;--amber-text:#FAC775;
+  --red-bg:#2a0c0c;--red-text:#F09595;
+  --success-bg:#142a08;--success-text:#97C459;
+}}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-tertiary);color:var(--text-primary);height:100vh;display:flex;overflow:hidden}
 
-/* Sidebar */
-.sidebar{width:220px;background:var(--bg-secondary);border-right:0.5px solid var(--border-light);display:flex;flex-direction:column;flex-shrink:0}
-.logo{font-size:15px;font-weight:600;padding:16px;border-bottom:0.5px solid var(--border-light);letter-spacing:-0.3px}
-.nav-section{padding:10px 0}
+/* ── Layout ── */
+.sidebar{width:220px;background:var(--bg-secondary);border-right:0.5px solid var(--border-light);display:flex;flex-direction:column;flex-shrink:0;height:100vh;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;height:100vh}
+
+/* ── Sidebar ── */
+.logo{font-size:15px;font-weight:600;padding:16px;border-bottom:0.5px solid var(--border-light)}
 .nav-label{font-size:10px;color:var(--text-tertiary);padding:0 14px 5px;text-transform:uppercase;letter-spacing:0.6px}
-.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;border-radius:0;transition:background .1s}
-.nav-item:hover{background:var(--bg-primary);color:var(--text-primary)}
-.nav-item.active{background:var(--bg-primary);color:var(--text-primary);font-weight:500}
+.nav-section{padding:10px 0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:13px;color:var(--text-secondary);cursor:pointer;transition:background .1s}
+.nav-item:hover,.nav-item.active{background:var(--bg-primary);color:var(--text-primary);font-weight:500}
 .nav-item svg{flex-shrink:0;opacity:.7}
 .cal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.sidebar-divider{height:0.5px;background:var(--border-light);margin:4px 0}
-.weather-sb{padding:12px 14px;margin-top:auto;border-top:0.5px solid var(--border-light)}
+.sidebar-divider{height:0.5px;background:var(--border-light)}
+.weather-sb{padding:12px 14px;border-top:0.5px solid var(--border-light);margin-top:auto}
 .ws-temp{font-size:22px;font-weight:500}
 .ws-cond{font-size:11px;color:var(--text-secondary)}
 .ws-loc{font-size:10px;color:var(--text-tertiary);margin-bottom:7px}
@@ -57,8 +57,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ws-hi{font-weight:500;width:26px;text-align:right;font-size:11px}
 .outfit-chip{display:inline-block;font-size:10px;padding:2px 7px;border-radius:8px;margin-top:6px;background:var(--blue-bg);color:var(--blue-text)}
 
-/* Main area */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+/* ── Topbar ── */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0}
 .topbar-title{font-size:15px;font-weight:600}
 .topbar-sub{font-size:11px;color:var(--text-tertiary);margin-top:1px}
@@ -68,25 +67,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .badge-saving{background:var(--amber-bg);color:var(--amber-text)}
 .btn{background:var(--bg-primary);border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 12px;font-size:12px;font-weight:500;color:var(--text-primary);cursor:pointer;transition:background .1s}
 .btn:hover{background:var(--bg-secondary)}
-.content{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px;min-height:0}
-#panel-week .week-grid{overflow-y:auto;flex:1;min-height:0}
 
-/* Panel switching */
-.panel{display:none;flex-direction:column;gap:14px}
-.panel.active{display:flex}
-#panel-week{display:none}
-#panel-week.active{display:flex;flex:1;overflow:hidden;gap:0}
+/* ── Panels ── */
+/* Each view is a separate section; JS shows/hides them */
+.view{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.view.active{display:flex}
 
-/* Section label */
+/* ── Today / Tasks / Projects share a scrollable content area ── */
+.scroll-content{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
 .sec-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px}
 
-/* Stats row */
+/* ── Stats ── */
 .stats-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .stat-card{background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px}
 .stat-val{font-size:22px;font-weight:500}
 .stat-lbl{font-size:11px;color:var(--text-tertiary);margin-top:1px}
 
-/* Tasks */
+/* ── Tasks ── */
 .add-form{display:flex;gap:6px;align-items:center;padding:7px 10px;background:var(--bg-secondary);border:0.5px solid var(--border-light);border-radius:var(--radius-md);margin-bottom:8px}
 .add-form input{flex:1;border:none;background:transparent;font-size:12px;color:var(--text-primary);outline:none}
 .add-form input::placeholder{color:var(--text-tertiary)}
@@ -110,20 +107,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .task-row:hover .del-btn{opacity:1}
 .del-btn:hover{color:var(--red);background:var(--red-bg)}
 
-/* Projects */
-.project-card{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:13px 15px;margin-bottom:10px;cursor:pointer;transition:border-color .1s}
+/* ── Projects ── */
+.project-card{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:13px 15px;margin-bottom:10px;transition:border-color .1s}
 .project-card:hover{border-color:var(--border-mid)}
-.proj-header{display:flex;align-items:center;gap:9px}
+.proj-header{display:flex;align-items:center;gap:9px;cursor:pointer}
 .proj-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .proj-name{flex:1;font-size:14px;font-weight:500}
 .proj-pct{font-size:12px;font-weight:500;color:var(--text-secondary)}
-.acct-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500}
-.ab-gcal{background:var(--blue-bg);color:var(--blue-text)}
-.ab-work{background:var(--blue-bg);color:var(--blue-text)}
-
+.acct-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500;background:var(--blue-bg);color:var(--blue-text)}
 .proj-del-btn{width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;opacity:0;transition:opacity .1s;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:2px}
 .project-card:hover .proj-del-btn{opacity:1}
 .proj-del-btn:hover{color:var(--red);background:var(--red-bg)}
+.proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 5px}
 .progress-track{height:5px;background:var(--bg-secondary);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
@@ -140,238 +135,230 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pt-del:hover{color:var(--red)}
 .add-pt{display:flex;gap:6px;margin-top:6px}
 .add-pt input{flex:1;border:0.5px solid var(--border-light);background:var(--bg-primary);border-radius:var(--radius-md);padding:5px 8px;font-size:12px;color:var(--text-primary);outline:none}
-.add-pt input:focus{border-color:var(--border-mid)}
 .add-pt input::placeholder{color:var(--text-tertiary)}
 .add-pt-btn{border:0.5px solid var(--border-mid);background:transparent;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:var(--text-secondary);cursor:pointer}
-.add-pt-btn:hover{background:var(--bg-secondary)}
 .new-proj-form{background:var(--bg-primary);border:0.5px dashed var(--border-mid);border-radius:var(--radius-lg);padding:14px 15px;display:none;flex-direction:column;gap:8px;margin-bottom:10px}
 .new-proj-form.open{display:flex}
 .nf-row{display:flex;gap:8px}
 .nf-input{flex:1;border:0.5px solid var(--border-light);background:var(--bg-secondary);border-radius:var(--radius-md);padding:6px 10px;font-size:12px;color:var(--text-primary);outline:none}
-.nf-input:focus{border-color:var(--border-mid)}
 .nf-input::placeholder{color:var(--text-tertiary)}
 .nf-select{border:0.5px solid var(--border-light);background:var(--bg-secondary);border-radius:var(--radius-md);padding:6px 8px;font-size:12px;color:var(--text-primary);outline:none}
 .nf-actions{display:flex;gap:6px;justify-content:flex-end}
 .nf-cancel{border:0.5px solid var(--border-light);background:transparent;border-radius:var(--radius-md);padding:5px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer}
 .nf-save{border:none;background:var(--blue-border);border-radius:var(--radius-md);padding:5px 12px;font-size:12px;font-weight:500;color:white;cursor:pointer}
 
-/* Week view */
-.week-header{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr));border-bottom:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0}
+/* ── Today timeline ── */
+.timeline{display:flex;flex-direction:column}
+.t-row{display:flex;min-height:52px}
+.t-label{width:48px;font-size:10px;color:var(--text-tertiary);padding:4px 6px 0;text-align:right;flex-shrink:0;border-right:0.5px solid var(--border-light)}
+.t-col{flex:1;border-top:0.5px solid var(--border-light);padding:3px 0 3px 8px;display:flex;flex-direction:column;gap:3px}
+.ev-block{border-radius:var(--radius-md);padding:5px 8px;margin-bottom:2px;border-left:2px solid var(--blue-border);background:var(--blue-bg)}
+.ev-title{font-size:12px;font-weight:500;color:var(--blue-text)}
+.ev-meta{font-size:10px;color:var(--blue-text);opacity:.75}
+.free-slot{font-size:10px;color:var(--text-tertiary);font-style:italic;padding:4px 0}
+.now-bar{height:1.5px;background:var(--red);position:relative;margin:0 0 0 48px}
+.now-bar::before{content:'';position:absolute;left:-4px;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.now-time-label{position:absolute;left:8px;top:-7px;font-size:9px;color:var(--red-text)}
+
+/* ── Week view ── */
+.week-weather{flex-shrink:0;background:var(--bg-primary);border-bottom:0.5px solid var(--border-light);padding:10px 16px}
+.week-weather-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.week-weather-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ww-card{border-radius:var(--radius-md);padding:9px 10px}
+.ww-day{font-size:11px;font-weight:500;margin-bottom:3px}
+.ww-row{display:flex;align-items:center;justify-content:space-between}
+.ww-hi{font-size:18px;font-weight:500}
+.ww-icon{font-size:18px;line-height:1}
+.ww-cond{font-size:10px;margin-top:2px}
+.ww-outfit{font-size:10px;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:4px;margin-top:5px;line-height:1.35}
+.week-header-row{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr));flex-shrink:0;border-bottom:0.5px solid var(--border-light);background:var(--bg-primary)}
 .wh-spacer{border-right:0.5px solid var(--border-light)}
 .wh-day{padding:8px 6px 7px;text-align:center;border-right:0.5px solid var(--border-light)}
 .wh-day:last-child{border-right:none}
 .wh-name{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.3px}
 .wh-num{font-size:18px;font-weight:500;color:var(--text-secondary);line-height:1.2}
-.wh-num.today-num{color:white;background:var(--blue-border);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;margin:2px auto 0}
+.wh-today{color:white;background:var(--blue-border);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;margin:2px auto 0}
 .week-grid-scroll{flex:1;overflow-y:auto}
 .week-grid{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr))}
-.hr-label{font-size:10px;color:var(--text-tertiary);padding:3px 5px 0;text-align:right;border-right:0.5px solid var(--border-light);height:52px}
-.day-cell{border-right:0.5px solid var(--border-light);border-top:0.5px solid var(--border-light);height:52px;padding:2px 3px;cursor:pointer}
-.day-cell:last-child{border-right:none}
-.day-cell:hover{background:var(--bg-secondary)}
-.ev{border-radius:4px;padding:3px 5px;font-size:10px;overflow:hidden;margin-bottom:2px}
-.ev-t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ev-m{opacity:.7;font-size:9px}
-.ev-gcal{background:var(--blue-bg);border-left:2px solid var(--blue-border);border-radius:0 4px 4px 0}
-.ev-gcal .ev-t,.ev-gcal .ev-m{color:var(--blue-text)}
-
-.ev-task{background:var(--amber-bg);border-left:2px solid var(--amber-border);border-radius:0 4px 4px 0}
-.ev-task .ev-t,.ev-task .ev-m{color:var(--amber-text)}
-.now-marker{grid-column:1/-1;height:0;position:relative;pointer-events:none}
-.now-line{position:absolute;left:44px;right:0;height:1.5px;background:var(--red)}
-.now-dot{position:absolute;left:40px;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--red)}
-.now-lbl{position:absolute;left:0;top:-7px;width:40px;font-size:9px;color:var(--red-text);text-align:right;padding-right:3px}
+.wg-label{font-size:10px;color:var(--text-tertiary);padding:3px 5px 0;text-align:right;border-right:0.5px solid var(--border-light);height:52px;flex-shrink:0}
+.wg-cell{border-right:0.5px solid var(--border-light);border-top:0.5px solid var(--border-light);height:52px;padding:2px 3px;position:relative}
+.wg-cell:last-child{border-right:none}
+.wg-ev{border-radius:3px;padding:2px 5px;font-size:10px;overflow:hidden;margin-bottom:2px;border-left:2px solid var(--blue-border);background:var(--blue-bg)}
+.wg-ev-t{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--blue-text)}
+.wg-ev-m{font-size:9px;color:var(--blue-text);opacity:.75}
+.now-line-week{position:absolute;left:0;right:0;height:1.5px;background:var(--red);z-index:2}
 .week-legend{display:flex;gap:12px;padding:8px 16px;border-top:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0;flex-wrap:wrap}
 .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-tertiary)}
 .leg-dot{width:8px;height:8px;border-radius:2px}
+.week-no-cal{flex:1;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-tertiary)}
 
-
-
-/* Suggest btn */
+/* ── Suggest btn ── */
 .suggest-btn{background:var(--bg-secondary);border:0.5px dashed var(--border-mid);border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;text-align:left;width:100%}
 .suggest-btn:hover{background:var(--bg-primary);color:var(--text-primary)}
 
-/* Today schedule */
-.timeline{display:flex;flex-direction:column;gap:2px}
-.hour-row{display:flex;min-height:52px}
-.hl{width:48px;font-size:10px;color:var(--text-tertiary);padding:4px 6px 0;text-align:right;flex-shrink:0;border-right:0.5px solid var(--border-light)}
-.hc{flex:1;border-top:0.5px solid var(--border-light);padding:3px 0 3px 8px;display:flex;flex-direction:column;gap:3px}
-.ev-block{border-radius:var(--radius-md);padding:5px 8px;margin-bottom:2px}
-.free-add{font-size:10px;color:var(--text-tertiary);font-style:italic;padding:4px 0;cursor:pointer}
-.free-add:hover{color:var(--text-secondary)}
-.today-now{height:1.5px;background:var(--red);position:relative;margin:2px 0 2px 48px}
-.now-dot2{width:7px;height:7px;border-radius:50%;background:var(--red);position:absolute;left:-3px;top:-3px}
-.now-t{font-size:9px;color:var(--red-text);position:absolute;left:8px;top:-7px}
-
-/* Scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:2px}
 </style>
-<script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
-<div class="app">
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="logo">Day Planner</div>
-    <div class="nav-section">
-      <div class="nav-label">Views</div>
-      <div class="nav-item active" onclick="switchPanel('today',this)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M10 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        Today
-      </div>
-      <div class="nav-item" onclick="switchPanel('week',this)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12M5 5v8M9 5v8" stroke="currentColor" stroke-width="1.2"/></svg>
-        Week
-      </div>
-      <div class="nav-item" onclick="switchPanel('tasks',this)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-        All tasks
-      </div>
-      <div class="nav-item" onclick="switchPanel('projects',this)">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
-        Projects
-      </div>
 
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+  <div class="logo">Day Planner</div>
+  <div class="nav-section">
+    <div class="nav-label">Views</div>
+    <div class="nav-item active" onclick="showView('today',this)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12" stroke="currentColor" stroke-width="1.2"/><path d="M4 1v2M10 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Today
     </div>
-    <div class="sidebar-divider"></div>
-    <div class="nav-section">
-      <div class="nav-label">Calendar</div>
-      <div class="nav-item"><span class="cal-dot" style="background:#378ADD"></span>leo.spaeder@gmail.com</div>
-      <div style="padding:4px 14px 8px;display:flex;flex-direction:column;gap:6px">
-        <button id="gcal-signin-btn" onclick="gcalSignIn()" style="background:var(--blue-border);border:none;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:white;cursor:pointer;width:100%">Sign in to Google</button>
-        <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
-      </div>
+    <div class="nav-item" onclick="showView('week',this)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 5h12M5 5v8M9 5v8" stroke="currentColor" stroke-width="1.2"/></svg>Week
     </div>
-    <div class="weather-sb" id="weather-sb">
-      <div class="ws-temp" id="w-temp">--°F</div>
-      <div class="ws-cond" id="w-cond">Loading...</div>
-      <div class="ws-loc" id="w-loc">Palo Alto, CA</div>
-      <div class="ws-days" id="w-days"></div>
-      <div class="outfit-chip" id="w-outfit">Fetching weather...</div>
+    <div class="nav-item" onclick="showView('tasks',this)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>All tasks
+    </div>
+    <div class="nav-item" onclick="showView('projects',this)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>Projects
     </div>
   </div>
-
-  <!-- Main -->
-  <div class="main">
-    <div class="topbar">
-      <div>
-        <div class="topbar-title" id="topbar-title">Today</div>
-        <div class="topbar-sub" id="topbar-sub">Loading...</div>
-      </div>
-      <div class="topbar-actions">
-        <span class="badge" id="cal-badge" style="color:var(--text-tertiary)">Not signed in</span>
-        <span class="badge badge-success" id="save-badge">&#10003; Saved</span>
-        <button class="btn" id="action-btn" onclick="handleActionBtn()">+ Add task</button>
-      </div>
+  <div class="sidebar-divider"></div>
+  <div class="nav-section">
+    <div class="nav-label">Calendar</div>
+    <div class="nav-item"><span class="cal-dot" style="background:#378ADD"></span>leo.spaeder@gmail.com</div>
+    <div style="padding:4px 14px 8px;display:flex;flex-direction:column;gap:6px">
+      <button id="gcal-signin-btn" onclick="gcalSignIn()" style="background:var(--blue-border);border:none;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:white;cursor:pointer;width:100%">Sign in to Google</button>
+      <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
     </div>
-
-    <!-- Week header (only shown in week view) -->
-    <div class="week-header" id="week-header" style="display:none">
-      <div class="wh-spacer"></div>
-      <div class="wh-day"><div class="wh-name">Mon</div><div class="wh-num">23</div></div>
-      <div class="wh-day"><div class="wh-name">Tue</div><div class="wh-num">24</div></div>
-      <div class="wh-day"><div class="wh-name">Wed</div><div class="wh-num">25</div></div>
-      <div class="wh-day"><div class="wh-name">Thu</div><div class="wh-num">26</div></div>
-      <div class="wh-day"><div class="wh-name">Fri</div><div class="wh-num today-num">27</div></div>
-    </div>
-
-    <div class="content" id="main-content">
-
-      <!-- TODAY -->
-      <div id="panel-today" class="panel active">
-        <div>
-          <div class="sec-label">Schedule</div>
-          <div class="timeline" id="today-timeline"></div>
-        </div>
-        <div>
-          <div class="sec-label">Priority tasks</div>
-          <div id="today-tasks"></div>
-          <button class="suggest-btn" onclick="switchPanel('tasks', document.querySelectorAll('.nav-item')[2])">Go to all tasks &rarr;</button>
-        </div>
-      </div>
-
-      <!-- WEEK -->
-      <div id="panel-week" class="panel" style="flex:1;overflow:hidden;margin:-16px -20px;flex-direction:column">
-        <!-- Weather banner -->
-        <div id="week-weather-banner" style="flex-shrink:0;border-bottom:0.5px solid var(--border-light);background:var(--bg-primary);padding:10px 16px;display:none">
-          <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">5-day forecast &amp; what to wear</div>
-          <div id="week-weather-cards" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px"></div>
-        </div>
-        <div id="week-signin-prompt" style="display:none;padding:40px 20px;text-align:center;color:var(--text-tertiary);font-size:13px">
-          Sign in to Google Calendar to see your events.
-        </div>
-        <div id="week-grid-scroll" style="flex:1;overflow-y:auto;display:none">
-          <div class="week-grid" id="week-grid"></div>
-        </div>
-        <div class="week-legend">
-          <div class="leg"><div class="leg-dot" style="background:#B5D4F4;border-left:2px solid #378ADD"></div>Google Calendar</div>
-          <div class="leg"><div class="leg-dot" style="background:#FAC775;border-left:2px solid #EF9F27"></div>Tasks due</div>
-        </div>
-      </div>
-
-      <!-- TASKS -->
-      <div id="panel-tasks" class="panel">
-        <div class="stats-row">
-          <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total tasks</div></div>
-          <div class="stat-card"><div class="stat-val" id="st-open">0</div><div class="stat-lbl">Open</div></div>
-          <div class="stat-card"><div class="stat-val" id="st-done">0</div><div class="stat-lbl">Completed</div></div>
-        </div>
-        <div>
-          <div class="sec-label">All tasks</div>
-          <div class="add-form">
-            <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
-            <select class="af-select" id="new-task-tag">
-              <option value="w">Work</option><option value="p">Personal</option>
-              <option value="o">Ops</option><option value="a">Admin</option>
-            </select>
-            <select class="af-select" id="new-task-pri">
-              <option value="h">High</option><option value="m">Med</option><option value="l">Low</option>
-            </select>
-            <button class="af-btn" onclick="addTask()">Add</button>
-          </div>
-          <div id="task-list"></div>
-        </div>
-      </div>
-
-      <!-- PROJECTS -->
-      <div id="panel-projects" class="panel">
-        <div class="stats-row">
-          <div class="stat-card"><div class="stat-val" id="sp-total">0</div><div class="stat-lbl">Projects</div></div>
-          <div class="stat-card"><div class="stat-val" id="sp-tasks">0</div><div class="stat-lbl">Total tasks</div></div>
-          <div class="stat-card"><div class="stat-val" id="sp-pct">0%</div><div class="stat-lbl">Overall done</div></div>
-        </div>
-        <div>
-          <div class="sec-label">Active projects</div>
-          <div class="new-proj-form" id="new-proj-form">
-            <div style="font-size:13px;font-weight:500">New project</div>
-            <div class="nf-row">
-              <input class="nf-input" id="nf-name" placeholder="Project name..." style="flex:2">
-              <select class="nf-select" id="nf-acct"><option value="gcal">Google Calendar</option></select>
-              <select class="nf-select" id="nf-color"><option value="#378ADD">Blue</option><option value="#534AB7">Purple</option><option value="#639922">Green</option><option value="#EF9F27">Amber</option><option value="#D85A30">Coral</option><option value="#1D9E75">Teal</option></select>
-            </div>
-            <div class="nf-actions">
-              <button class="nf-cancel" onclick="hideNewProjForm()">Cancel</button>
-              <button class="nf-save" onclick="createProject()">Create project</button>
-            </div>
-          </div>
-          <div id="proj-list"></div>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-
-    <!-- Week grid scroll area lives outside .content when week is active -->
+  </div>
+  <div class="weather-sb">
+    <div class="ws-temp" id="w-temp">--°F</div>
+    <div class="ws-cond" id="w-cond">Loading...</div>
+    <div class="ws-loc" id="w-loc">Palo Alto, CA</div>
+    <div class="ws-days" id="w-days"></div>
+    <div class="outfit-chip" id="w-outfit">Fetching...</div>
   </div>
 </div>
 
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Today</div>
+      <div class="topbar-sub" id="topbar-sub"></div>
+    </div>
+    <div class="topbar-actions">
+      <span class="badge" id="cal-badge" style="color:var(--text-tertiary)">Not signed in</span>
+      <span class="badge badge-success" id="save-badge">✓ Saved</span>
+      <button class="btn" id="action-btn" onclick="handleActionBtn()">+ Add task</button>
+    </div>
+  </div>
+
+  <!-- ── TODAY VIEW ── -->
+  <div id="view-today" class="view active">
+    <div class="scroll-content">
+      <div>
+        <div class="sec-label">Schedule</div>
+        <div class="timeline" id="today-timeline"></div>
+      </div>
+      <div>
+        <div class="sec-label">Priority tasks</div>
+        <div id="today-tasks"></div>
+        <button class="suggest-btn" onclick="showView('tasks',document.querySelectorAll('.nav-item')[2])">Go to all tasks →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WEEK VIEW ── -->
+  <div id="view-week" class="view">
+    <!-- Weather banner always shown -->
+    <div class="week-weather" id="week-weather">
+      <div class="week-weather-label">5-day forecast &amp; what to wear</div>
+      <div class="week-weather-cards" id="week-weather-cards">
+        <div style="font-size:12px;color:var(--text-tertiary);grid-column:1/-1;padding:8px 0">Loading weather...</div>
+      </div>
+    </div>
+    <!-- Week header: day names + dates -->
+    <div class="week-header-row" id="week-header-row">
+      <div class="wh-spacer"></div>
+      <div class="wh-day"><div class="wh-name" id="wh0n">Mon</div><div id="wh0d" class="wh-num">—</div></div>
+      <div class="wh-day"><div class="wh-name" id="wh1n">Tue</div><div id="wh1d" class="wh-num">—</div></div>
+      <div class="wh-day"><div class="wh-name" id="wh2n">Wed</div><div id="wh2d" class="wh-num">—</div></div>
+      <div class="wh-day"><div class="wh-name" id="wh3n">Thu</div><div id="wh3d" class="wh-num">—</div></div>
+      <div class="wh-day"><div class="wh-name" id="wh4n">Fri</div><div id="wh4d" class="wh-num">—</div></div>
+    </div>
+    <!-- Calendar grid or sign-in prompt -->
+    <div id="week-cal-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">
+      <div id="week-no-cal" class="week-no-cal">Sign in to Google Calendar to see your events.</div>
+      <div id="week-grid-scroll" class="week-grid-scroll" style="display:none">
+        <div class="week-grid" id="week-grid"></div>
+      </div>
+    </div>
+    <div class="week-legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--blue-bg);border-left:2px solid var(--blue-border)"></div>Google Calendar</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--amber-bg);border-left:2px solid var(--amber-border)"></div>Tasks due</div>
+    </div>
+  </div>
+
+  <!-- ── TASKS VIEW ── -->
+  <div id="view-tasks" class="view">
+    <div class="scroll-content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total tasks</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-open">0</div><div class="stat-lbl">Open</div></div>
+        <div class="stat-card"><div class="stat-val" id="st-done">0</div><div class="stat-lbl">Completed</div></div>
+      </div>
+      <div>
+        <div class="sec-label">All tasks</div>
+        <div class="add-form">
+          <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+          <select class="af-select" id="new-task-tag"><option value="w">Work</option><option value="p">Personal</option><option value="o">Ops</option><option value="a">Admin</option></select>
+          <select class="af-select" id="new-task-pri"><option value="h">High</option><option value="m">Med</option><option value="l">Low</option></select>
+          <button class="af-btn" onclick="addTask()">Add</button>
+        </div>
+        <div id="task-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROJECTS VIEW ── -->
+  <div id="view-projects" class="view">
+    <div class="scroll-content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="sp-total">0</div><div class="stat-lbl">Projects</div></div>
+        <div class="stat-card"><div class="stat-val" id="sp-tasks">0</div><div class="stat-lbl">Total tasks</div></div>
+        <div class="stat-card"><div class="stat-val" id="sp-pct">0%</div><div class="stat-lbl">Overall done</div></div>
+      </div>
+      <div>
+        <div class="sec-label">Active projects</div>
+        <div class="new-proj-form" id="new-proj-form">
+          <div style="font-size:13px;font-weight:500">New project</div>
+          <div class="nf-row">
+            <input class="nf-input" id="nf-name" placeholder="Project name..." style="flex:2">
+            <select class="nf-select" id="nf-color"><option value="#378ADD">Blue</option><option value="#534AB7">Purple</option><option value="#639922">Green</option><option value="#EF9F27">Amber</option><option value="#D85A30">Coral</option><option value="#1D9E75">Teal</option></select>
+          </div>
+          <div class="nf-actions">
+            <button class="nf-cancel" onclick="hideNewProjForm()">Cancel</button>
+            <button class="nf-save" onclick="createProject()">Create</button>
+          </div>
+        </div>
+        <div id="proj-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
 <script>
-// ─── Storage keys ───────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const TASK_KEY = 'dayplanner_tasks_v2';
 const PROJ_KEY = 'dayplanner_projects_v2';
+const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googleusercontent.com';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
 
-// ─── Default data ────────────────────────────────────────────────────────────
+// ─── Default data ─────────────────────────────────────────────────────────────
 const DEFAULT_TASKS = [
   {id:1,text:'Review SgtMaj letter of continuity draft',tag:'w',pri:'h',done:false},
   {id:2,text:'Send CIRRAS update to S3',tag:'w',pri:'m',done:true},
@@ -381,13 +368,13 @@ const DEFAULT_TASKS = [
   {id:6,text:'Zeppelin University program comparison',tag:'p',pri:'l',done:false},
 ];
 const DEFAULT_PROJECTS = [
-  {id:1,name:'EABO TTPs development',acct:'usmc',color:'#534AB7',expanded:false,tasks:[
+  {id:1,name:'EABO TTPs development',color:'#534AB7',expanded:false,tasks:[
     {id:11,text:'Draft Section 1 — concept of operations',done:true},
     {id:12,text:'Draft Section 3 — revisions',done:false},
     {id:13,text:'Coordinate review with S3',done:true},
     {id:14,text:'Final formatting and submission',done:false},
   ]},
-  {id:2,name:'RESOLUTE DRAGON prep',acct:'usmc',color:'#378ADD',expanded:false,tasks:[
+  {id:2,name:'RESOLUTE DRAGON prep',color:'#378ADD',expanded:false,tasks:[
     {id:21,text:'AAR prep — key lessons',done:false},
     {id:22,text:'Logistics readiness brief',done:true},
     {id:23,text:'Personnel accountability',done:true},
@@ -395,12 +382,12 @@ const DEFAULT_PROJECTS = [
     {id:25,text:'Coordinate with MLR S4',done:false},
     {id:26,text:'Submit final AAR',done:false},
   ]},
-  {id:3,name:'Doctoral program research',acct:'personal',color:'#639922',expanded:false,tasks:[
+  {id:3,name:'Doctoral program research',color:'#639922',expanded:false,tasks:[
     {id:31,text:'UniBw München — application requirements',done:false},
     {id:32,text:'Zeppelin University — program comparison',done:false},
     {id:33,text:'Request academic transcripts',done:false},
   ]},
-  {id:4,name:'Battalion admin & continuity',acct:'work',color:'#EF9F27',expanded:false,tasks:[
+  {id:4,name:'Battalion admin & continuity',color:'#EF9F27',expanded:false,tasks:[
     {id:41,text:'SgtMaj letter of continuity — draft review',done:false},
     {id:42,text:'CIRRAS update to S3',done:true},
     {id:43,text:'Submit travel request',done:false},
@@ -410,500 +397,428 @@ const DEFAULT_PROJECTS = [
 const TAG_LABELS = {w:'Work',p:'Personal',o:'Ops',a:'Admin'};
 const TAG_CLASSES = {w:'tag-w',p:'tag-p',o:'tag-o',a:'tag-a'};
 const PRI_CLASSES = {h:'ph',m:'pm',l:'pl'};
-const ACCT_LABELS = {gcal:'Google Calendar',work:'Google Calendar',usmc:'Google Calendar',personal:'Google Calendar'};
-const ACCT_CLASSES = {gcal:'ab-gcal',work:'ab-gcal',usmc:'ab-gcal',personal:'ab-gcal'};
+const WEEK_HOURS = [
+  {l:'7 AM',h:7},{l:'8 AM',h:8},{l:'9 AM',h:9},{l:'10 AM',h:10},
+  {l:'11 AM',h:11},{l:'12 PM',h:12},{l:'1 PM',h:13},{l:'2 PM',h:14},
+  {l:'3 PM',h:15},{l:'4 PM',h:16},{l:'5 PM',h:17},{l:'6 PM',h:18},
+];
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ─── State ───────────────────────────────────────────────────────────────────
+// ─── State ────────────────────────────────────────────────────────────────────
 let tasks = [], projects = [], nextTaskId = 200, nextProjId = 300, nextPtId = 500;
 let weatherData = null;
-
-// ─── Persistence ─────────────────────────────────────────────────────────────
-function loadData() {
-  try { const d = JSON.parse(localStorage.getItem(TASK_KEY)); tasks = d.tasks; nextTaskId = d.nextId || 200; } catch(e) { tasks = DEFAULT_TASKS; }
-  try { const d = JSON.parse(localStorage.getItem(PROJ_KEY)); projects = d.projects; nextProjId = d.nextProjId || 300; nextPtId = d.nextPtId || 500; } catch(e) { projects = DEFAULT_PROJECTS; }
-}
-function saveData() {
-  setBadge('saving');
-  try {
-    localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId: nextTaskId}));
-    localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
-    setBadge('saved');
-  } catch(e) { setBadge('error'); }
-}
-function setBadge(s) {
-  const b = document.getElementById('save-badge');
-  if(s==='saving'){b.textContent='Saving...';b.className='badge badge-saving';}
-  else if(s==='saved'){b.textContent='✓ All saved';b.className='badge badge-success';}
-  else {b.textContent='Error';b.className='badge';}
-}
+let gcalToken = null;
+let calEvents = [];
+let tokenClient = null;
+let currentView = 'today';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function pct(proj){return proj.tasks.length?Math.round(proj.tasks.filter(t=>t.done).length/proj.tasks.length*100):0;}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pct(proj){ return proj.tasks.length ? Math.round(proj.tasks.filter(t=>t.done).length/proj.tasks.length*100) : 0; }
+function fmtHour(h){ return h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM'; }
+function fmtTime(iso){
+  const d=new Date(iso), h=d.getHours(), m=d.getMinutes(), ap=h>=12?'PM':'AM';
+  const h12=h%12||12;
+  return m===0?`${h12} ${ap}`:`${h12}:${String(m).padStart(2,'0')} ${ap}`;
+}
+function fmtRange(ev){
+  if(!ev.start.dateTime) return 'All day';
+  const s=fmtTime(ev.start.dateTime);
+  const e=ev.end&&ev.end.dateTime?fmtTime(ev.end.dateTime):'';
+  return e?`${s}–${e}`:s;
+}
+function getMondayOf(date){
+  const d=new Date(date); d.setHours(0,0,0,0);
+  d.setDate(d.getDate()-((d.getDay()+6)%7));
+  return d;
+}
+function sameDay(a,b){ return a.toDateString()===b.toDateString(); }
+function eventsForDay(date){
+  const ds=date.toISOString().split('T')[0];
+  return calEvents.filter(e=>{
+    const start=e.start.dateTime?new Date(e.start.dateTime):new Date(e.start.date+'T00:00:00');
+    return start.toISOString().split('T')[0]===ds;
+  });
+}
 
-// ─── Panel switching ──────────────────────────────────────────────────────────
-const TITLES = {today:'Today',week:'Week of March 23–29, 2026',tasks:'All tasks',projects:'Projects'};
-const SUBS = {today:'Friday, March 27 · leo.spaeder@gmail.com',week:'Mon–Fri · leo.spaeder@gmail.com',tasks:'Changes saved automatically',projects:'Changes saved automatically'};
-const ACTION_BTNS = {today:'+ Add task',week:'',tasks:'+ Add task',projects:'+ New project'};
+// ─── Persistence ──────────────────────────────────────────────────────────────
+function loadData(){
+  try{ const d=JSON.parse(localStorage.getItem(TASK_KEY)); tasks=d.tasks; nextTaskId=d.nextId||200; }catch(e){ tasks=DEFAULT_TASKS; }
+  try{ const d=JSON.parse(localStorage.getItem(PROJ_KEY)); projects=d.projects; nextProjId=d.nextProjId||300; nextPtId=d.nextPtId||500; }catch(e){ projects=DEFAULT_PROJECTS; }
+}
+function saveData(){
+  setBadge('saving');
+  try{
+    localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
+    localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+    setBadge('saved');
+  }catch(e){ setBadge('error'); }
+}
+function setBadge(s){
+  const b=document.getElementById('save-badge');
+  if(s==='saving'){b.textContent='Saving...';b.className='badge badge-saving';}
+  else if(s==='saved'){b.textContent='✓ Saved';b.className='badge badge-success';}
+  else{b.textContent='Error';b.className='badge';}
+}
 
-function switchPanel(name, el) {
+// ─── View switching ───────────────────────────────────────────────────────────
+function showView(name, navEl){
+  currentView = name;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  if(el) el.classList.add('active');
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
+  if(navEl) navEl.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
 
-  // Dynamic week title
-  if(name==='week'){
-    const now=new Date(), mon=new Date(now);
-    mon.setDate(now.getDate()-((now.getDay()+6)%7));
-    const fri=new Date(mon); fri.setDate(mon.getDate()+4);
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    document.getElementById('topbar-title').textContent=`Week of ${months[mon.getMonth()]} ${mon.getDate()}–${fri.getDate()}`;
-  } else {
-    document.getElementById('topbar-title').textContent = TITLES[name]||name;
-  }
-  document.getElementById('topbar-sub').textContent = SUBS[name]||'';
+  const now = new Date();
+  const titles = {
+    today: `Today — ${DAY_NAMES[now.getDay()]}, ${MONTH_SHORT[now.getMonth()]} ${now.getDate()}`,
+    week: weekTitle(),
+    tasks: 'All tasks',
+    projects: 'Projects',
+  };
+  document.getElementById('topbar-title').textContent = titles[name]||name;
+  document.getElementById('topbar-sub').textContent = 'leo.spaeder@gmail.com';
+
   const ab = document.getElementById('action-btn');
-  ab.textContent = ACTION_BTNS[name]||'';
-  ab.style.display = ACTION_BTNS[name] ? '' : 'none';
+  if(name==='tasks'){ ab.textContent='+ Add task'; ab.style.display=''; }
+  else if(name==='projects'){ ab.textContent='+ New project'; ab.style.display=''; }
+  else{ ab.style.display='none'; }
 
-  // Week header row
-  document.getElementById('week-header').style.display = name==='week' ? 'grid' : 'none';
+  if(name==='week'){ buildWeekView(); }
+  if(name==='today'){ buildTodayTimeline(); }
+}
 
-  // Content padding: remove for week so grid fills full height
-  const content = document.getElementById('main-content');
-  if(name==='week'){
-    content.style.padding = '0';
-    content.style.gap = '0';
-    content.style.overflow = 'hidden';
-    // Always show weather banner
-    buildWeekWeatherBanner();
-    // Show sign-in prompt or calendar grid
-    const prompt = document.getElementById('week-signin-prompt');
-    const scroll = document.getElementById('week-grid-scroll');
-    if(!gcalToken){
-      prompt.style.display = 'block';
-      scroll.style.display = 'none';
-    } else {
-      prompt.style.display = 'none';
-      scroll.style.display = 'flex';
-      scroll.style.flexDirection = 'column';
-      buildWeekGrid();
+function weekTitle(){
+  const now=new Date(), mon=getMondayOf(now), fri=new Date(mon);
+  fri.setDate(mon.getDate()+4);
+  return `Week of ${MONTH_SHORT[mon.getMonth()]} ${mon.getDate()}–${fri.getDate()}, ${fri.getFullYear()}`;
+}
+
+function handleActionBtn(){
+  if(currentView==='tasks') document.getElementById('new-task-input').focus();
+  else if(currentView==='projects') showNewProjForm();
+}
+
+// ─── Today timeline ───────────────────────────────────────────────────────────
+function buildTodayTimeline(){
+  const tl=document.getElementById('today-timeline');
+  if(!tl) return;
+  tl.innerHTML='';
+  const now=new Date(), nowH=now.getHours(), nowM=now.getMinutes();
+  const todayEvs=eventsForDay(now);
+  const hours=[6,7,8,9,10,11,12,13,14,15,16,17,18];
+  let nowDrawn=false;
+
+  hours.forEach(h=>{
+    if(h===nowH && !nowDrawn){
+      nowDrawn=true;
+      const bar=document.createElement('div');
+      bar.className='now-bar';
+      bar.style.marginTop=Math.round(nowM/60*52)+'px';
+      bar.innerHTML=`<span class="now-time-label">${fmtHour(nowH).replace(' ','')}${nowM>0?':'+String(nowM).padStart(2,'0'):''}</span>`;
+      tl.appendChild(bar);
     }
-  } else {
-    content.style.padding = '16px 20px';
-    content.style.gap = '14px';
-    content.style.overflow = '';
+    const row=document.createElement('div'); row.className='t-row';
+    const lbl=document.createElement('div'); lbl.className='t-label'; lbl.textContent=fmtHour(h);
+    const col=document.createElement('div'); col.className='t-col';
+    const evs=todayEvs.filter(e=>{
+      if(!e.start.dateTime) return false;
+      return new Date(e.start.dateTime).getHours()===h;
+    });
+    if(evs.length){
+      evs.forEach(e=>{
+        const d=document.createElement('div'); d.className='ev-block';
+        d.innerHTML=`<div class="ev-title">${esc(e.summary||'(no title)')}</div><div class="ev-meta">${fmtRange(e)}</div>`;
+        col.appendChild(d);
+      });
+    } else {
+      const f=document.createElement('div'); f.className='free-slot'; f.textContent='+ Free';
+      col.appendChild(f);
+    }
+    row.appendChild(lbl); row.appendChild(col);
+    tl.appendChild(row);
+  });
+
+  // Today tasks
+  const tt=document.getElementById('today-tasks');
+  if(tt){
+    tt.innerHTML='';
+    tasks.filter(t=>!t.done).slice(0,5).forEach(t=>{
+      const row=document.createElement('div'); row.className='task-row';
+      row.onclick=()=>toggleTask(t.id);
+      row.innerHTML=`<div class="check"></div><div class="task-text">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||'Work'}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div>`;
+      tt.appendChild(row);
+    });
   }
 }
 
-function handleActionBtn() {
-  const active = document.querySelector('.panel.active');
-  const id = active ? active.id : '';
-  if(id==='panel-tasks') { document.getElementById('new-task-input').focus(); }
-  else if(id==='panel-projects') { showNewProjForm(); }
-  else { switchPanel('tasks', document.querySelectorAll('.nav-item')[2]); setTimeout(()=>document.getElementById('new-task-input').focus(),100); }
+// ─── Week view ────────────────────────────────────────────────────────────────
+function buildWeekView(){
+  buildWeekWeather();
+  buildWeekDates();
+  if(gcalToken){ showWeekGrid(); buildWeekGrid(); }
+  else { showWeekNoCal(); }
+}
+
+function buildWeekDates(){
+  const now=new Date(), mon=getMondayOf(now);
+  const dayShort=['Mon','Tue','Wed','Thu','Fri'];
+  for(let i=0;i<5;i++){
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    const isToday=sameDay(d,now);
+    document.getElementById('wh'+i+'n').textContent=dayShort[i];
+    const numEl=document.getElementById('wh'+i+'d');
+    numEl.textContent=d.getDate();
+    numEl.className=isToday?'wh-today':'wh-num';
+  }
+}
+
+function showWeekGrid(){
+  document.getElementById('week-no-cal').style.display='none';
+  document.getElementById('week-grid-scroll').style.display='block';
+}
+function showWeekNoCal(){
+  document.getElementById('week-no-cal').style.display='flex';
+  document.getElementById('week-grid-scroll').style.display='none';
+}
+
+function buildWeekGrid(){
+  const grid=document.getElementById('week-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  const now=new Date(), mon=getMondayOf(now);
+  const nowH=now.getHours(), nowM=now.getMinutes();
+
+  WEEK_HOURS.forEach(hr=>{
+    const lbl=document.createElement('div'); lbl.className='wg-label'; lbl.textContent=hr.l;
+    grid.appendChild(lbl);
+    for(let d=0;d<5;d++){
+      const dayDate=new Date(mon); dayDate.setDate(mon.getDate()+d);
+      const cell=document.createElement('div'); cell.className='wg-cell';
+      // Draw now-line
+      if(hr.h===nowH && sameDay(dayDate,now)){
+        const line=document.createElement('div'); line.className='now-line-week';
+        line.style.top=Math.round(nowM/60*52)+'px';
+        cell.appendChild(line);
+      }
+      const evs=eventsForDay(dayDate).filter(e=>{
+        if(!e.start.dateTime) return false;
+        return new Date(e.start.dateTime).getHours()===hr.h;
+      });
+      evs.forEach(e=>{
+        const div=document.createElement('div'); div.className='wg-ev';
+        div.innerHTML=`<div class="wg-ev-t">${esc(e.summary||'(no title)')}</div><div class="wg-ev-m">${fmtRange(e)}</div>`;
+        cell.appendChild(div);
+      });
+      grid.appendChild(cell);
+    }
+  });
+}
+
+// ─── Week weather banner ──────────────────────────────────────────────────────
+function buildWeekWeather(){
+  const cards=document.getElementById('week-weather-cards');
+  if(!cards) return;
+  if(!weatherData){
+    cards.innerHTML='<div style="font-size:12px;color:var(--text-tertiary);grid-column:1/-1;padding:8px 0">Weather loading...</div>';
+    return;
+  }
+  const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',63:'Rain',71:'Light snow',80:'Showers',95:'Thunderstorm'};
+  const iconMap={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',61:'🌧',63:'🌧',71:'❄️',80:'🌦',95:'⛈'};
+  const highs=weatherData.daily.temperature_2m_max;
+  const codes=weatherData.daily.weathercode||[];
+  const pops=weatherData.daily.precipitation_probability_max||[];
+  const dates=weatherData.daily.time;
+  const now=new Date();
+
+  cards.innerHTML='';
+  const count=Math.min(5,highs.length);
+  for(let i=0;i<count;i++){
+    const dt=new Date(dates[i]+'T12:00:00');
+    const isToday=sameDay(dt,now);
+    const hi=Math.round(highs[i]);
+    const icon=iconMap[codes[i]]||'🌡';
+    const cond=condMap[codes[i]]||'';
+    const pop=pops[i]?Math.round(pops[i])+'% rain':'No rain';
+
+    // Color by temp
+    let bg,tc,border;
+    if(hi>=85){bg='#FCEBEB';tc='#791F1F';border='#E24B4A';}
+    else if(hi>=75){bg='#FAEEDA';tc='#633806';border='#EF9F27';}
+    else if(hi>=65){bg='#E6F1FB';tc='#0C447C';border='#378ADD';}
+    else if(hi>=55){bg='#EAF3DE';tc='#27500A';border='#639922';}
+    else{bg='#EEEDFE';tc='#3C3489';border='#534AB7';}
+
+    const outfit=hi>=85?'Very hot — shorts & tee':hi>=75?'Warm — short sleeves':hi>=65?'T-shirt + light layer':hi>=55?'Light jacket':'Jacket — cooler day';
+
+    const card=document.createElement('div');
+    card.className='ww-card';
+    card.style.cssText=`background:${bg};${isToday?'outline:2px solid '+border+';outline-offset:-2px':''}`;
+    card.innerHTML=`
+      <div class="ww-row"><span class="ww-day" style="color:${tc}">${isToday?'Today':DAY_NAMES[dt.getDay()]}</span><span class="ww-icon">${icon}</span></div>
+      <div class="ww-hi" style="color:${tc}">${hi}°F</div>
+      <div class="ww-cond" style="color:${border}">${cond} · ${pop}</div>
+      <div class="ww-outfit" style="color:${tc};border-top-color:${border}33">${outfit}</div>
+    `;
+    cards.appendChild(card);
+  }
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
-function renderTasks() {
-  const list = document.getElementById('task-list');
-  list.innerHTML = '';
-  const open = tasks.filter(t=>!t.done), done = tasks.filter(t=>t.done);
-  [...open,...done].forEach(t => {
-    const row = document.createElement('div');
-    row.className = 'task-row';
-    row.innerHTML = `<div class="check${t.done?' done':''}" onclick="toggleTask(${t.id})"></div><div class="task-text${t.done?' done':''}">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||'Work'}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div><button class="del-btn" onclick="deleteTask(${t.id})">&#215;</button>`;
+function renderTasks(){
+  const list=document.getElementById('task-list');
+  list.innerHTML='';
+  const open=tasks.filter(t=>!t.done), done=tasks.filter(t=>t.done);
+  [...open,...done].forEach(t=>{
+    const row=document.createElement('div'); row.className='task-row';
+    row.innerHTML=`<div class="check${t.done?' done':''}" onclick="toggleTask(${t.id})"></div><div class="task-text${t.done?' done':''}">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||''}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div><button class="del-btn" onclick="deleteTask(${t.id})">&#215;</button>`;
     list.appendChild(row);
   });
-  document.getElementById('st-total').textContent = tasks.length;
-  document.getElementById('st-open').textContent = open.length;
-  document.getElementById('st-done').textContent = done.length;
-  renderTodayTasks();
+  document.getElementById('st-total').textContent=tasks.length;
+  document.getElementById('st-open').textContent=open.length;
+  document.getElementById('st-done').textContent=done.length;
+  buildTodayTimeline();
 }
-function toggleTask(id) { const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done;renderTasks();saveData();} }
-function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id);renderTasks();saveData(); }
-function addTask() {
+function toggleTask(id){ const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done;renderTasks();saveData();} }
+function deleteTask(id){ tasks=tasks.filter(t=>t.id!==id);renderTasks();saveData(); }
+function addTask(){
   const inp=document.getElementById('new-task-input'), text=inp.value.trim();
   if(!text) return;
   tasks.unshift({id:nextTaskId++,text,tag:document.getElementById('new-task-tag').value,pri:document.getElementById('new-task-pri').value,done:false});
   inp.value=''; renderTasks(); saveData();
 }
-function renderTodayTasks() {
-  const el = document.getElementById('today-tasks');
-  if(!el) return;
-  el.innerHTML = '';
-  tasks.filter(t=>!t.done).slice(0,5).forEach(t => {
-    const row = document.createElement('div');
-    row.className = 'task-row';
-    row.innerHTML = `<div class="check" onclick="toggleTask(${t.id})"></div><div class="task-text">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||'Work'}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div>`;
-    el.appendChild(row);
-  });
-}
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
-function renderProjects() {
-  const list = document.getElementById('proj-list');
-  list.innerHTML = '';
-  let totalT=0, doneT=0;
-  projects.forEach(proj => {
+function renderProjects(){
+  const list=document.getElementById('proj-list');
+  list.innerHTML='';
+  let totalT=0,doneT=0;
+  projects.forEach(proj=>{
     totalT+=proj.tasks.length; doneT+=proj.tasks.filter(t=>t.done).length;
     const p=pct(proj);
-    const card=document.createElement('div');
-    card.className='project-card';
+    const card=document.createElement('div'); card.className='project-card';
     const tasksHtml=proj.tasks.map(t=>`<div class="pt-row" onclick="togglePT(${proj.id},${t.id})"><div class="pt-check${t.done?' done':''}"></div><div class="pt-text${t.done?' done':''}">${esc(t.text)}</div><button class="pt-del" onclick="event.stopPropagation();deletePT(${proj.id},${t.id})">&#215;</button></div>`).join('');
-    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><span class="acct-badge ${ACCT_CLASSES[proj.acct]||'ab-work'}">${ACCT_LABELS[proj.acct]||'Work'}</span><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);transition:transform .2s"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})" title="Delete project">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
+    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);flex-shrink:0"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
     list.appendChild(card);
   });
   document.getElementById('sp-total').textContent=projects.length;
   document.getElementById('sp-tasks').textContent=totalT;
   document.getElementById('sp-pct').textContent=totalT?Math.round(doneT/totalT*100)+'%':'0%';
 }
-function deleteProject(id){if(!confirm('Delete this project and all its tasks?'))return;projects=projects.filter(p=>p.id!==id);renderProjects();saveData();}
-function toggleExpand(id){const p=projects.find(p=>p.id===id);if(p){p.expanded=!p.expanded;renderProjects();saveData();}}
-function togglePT(pid,tid){const p=projects.find(p=>p.id===pid);if(!p)return;const t=p.tasks.find(t=>t.id===tid);if(t){t.done=!t.done;renderProjects();saveData();}}
-function deletePT(pid,tid){const p=projects.find(p=>p.id===pid);if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();}}
-function addPT(pid){const inp=document.getElementById('pt-inp-'+pid);const text=inp?inp.value.trim():'';if(!text)return;const p=projects.find(p=>p.id===pid);if(p){p.tasks.push({id:nextPtId++,text,done:false});renderProjects();saveData();}}
-function showNewProjForm(){document.getElementById('new-proj-form').classList.add('open');document.getElementById('nf-name').focus();}
-function hideNewProjForm(){document.getElementById('new-proj-form').classList.remove('open');document.getElementById('nf-name').value='';}
-function createProject(){const name=document.getElementById('nf-name').value.trim();if(!name)return;const acct=document.getElementById('nf-acct').value,color=document.getElementById('nf-color').value;projects.unshift({id:nextProjId++,name,acct,color,expanded:true,tasks:[]});hideNewProjForm();renderProjects();saveData();}
-
-// ─── Today timeline ───────────────────────────────────────────────────────────
-const TODAY_HOURS = [7,8,9,10,11,12,13,14,15,16,17];
-
-function buildTodayTimeline() {
-  const tl = document.getElementById('today-timeline');
-  if(!tl) return;
-  tl.innerHTML = '';
-  const now = new Date();
-  const nowH = now.getHours(), nowM = now.getMinutes();
-  const todayEvs = getEventsForDay(now);
-  let nowInserted = false;
-
-  TODAY_HOURS.forEach(h => {
-    const row = document.createElement('div');
-    row.className = 'hour-row';
-    const lbl = document.createElement('div');
-    lbl.className = 'hl';
-    lbl.textContent = h<=11?h+' AM':(h===12?'12 PM':(h-12)+' PM');
-    const col = document.createElement('div');
-    col.className = 'hc';
-
-    const evs = todayEvs.filter(e => {
-      if(!e.start.dateTime) return false;
-      return new Date(e.start.dateTime).getHours() === h;
-    });
-
-    if(evs.length) {
-      evs.forEach(e => {
-        const d = document.createElement('div');
-        d.className = 'ev-block ev-gcal';
-        d.innerHTML = `<div class="ev-t">${esc(e.summary||'(no title)')}</div><div class="ev-m">${fmtRange(e.start,e.end)}</div>`;
-        col.appendChild(d);
-      });
-    } else {
-      const free = document.createElement('div');
-      free.className = 'free-add';
-      free.textContent = '+ Free';
-      col.appendChild(free);
-    }
-
-    row.appendChild(lbl); row.appendChild(col);
-
-    if(h === nowH && !nowInserted) {
-      nowInserted = true;
-      tl.appendChild(row);
-      const nowEl = document.createElement('div');
-      nowEl.className = 'today-now';
-      const fmtNow = nowH>12?(nowH-12)+':'+String(nowM).padStart(2,'0')+' PM':nowH+':'+String(nowM).padStart(2,'0')+' AM';
-      nowEl.innerHTML = `<div class="now-dot2"></div><span class="now-t">${fmtNow}</span>`;
-      tl.appendChild(nowEl);
-    } else {
-      tl.appendChild(row);
-    }
-  });
-}
+function toggleExpand(id){ const p=projects.find(p=>p.id===id); if(p){p.expanded=!p.expanded;renderProjects();saveData();} }
+function togglePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(!p)return; const t=p.tasks.find(t=>t.id===tid); if(t){t.done=!t.done;renderProjects();saveData();} }
+function deletePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();} }
+function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():''; if(!text)return; const p=projects.find(p=>p.id===pid); if(p){p.tasks.push({id:nextPtId++,text,done:false});renderProjects();saveData();} }
+function deleteProject(id){ if(!confirm('Delete this project and all its tasks?'))return; projects=projects.filter(p=>p.id!==id);renderProjects();saveData(); }
+function showNewProjForm(){ document.getElementById('new-proj-form').classList.add('open'); document.getElementById('nf-name').focus(); }
+function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; }
+function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; projects.unshift({id:nextProjId++,name,color,expanded:true,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
 
 // ─── Google Calendar OAuth ────────────────────────────────────────────────────
-const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
-let gcalToken = null;
-let calendarEvents = [];
-let tokenClient = null;
+function updateCalBadge(state){
+  const b=document.getElementById('cal-badge');
+  if(state==='synced'){b.textContent='✓ Calendar synced';b.className='badge badge-success';}
+  else if(state==='syncing'){b.textContent='Syncing...';b.className='badge badge-saving';}
+  else if(state==='error'){b.textContent='Calendar error';b.className='badge';b.style.color='var(--red)';}
+  else{b.textContent='Not signed in';b.className='badge';b.style.color='var(--text-tertiary)';}
+}
 
-function initGoogleAuth() {
-  if(typeof google === 'undefined' || !google.accounts) {
-    setTimeout(initGoogleAuth, 500);
-    return;
+function initGoogleAuth(){
+  if(typeof google==='undefined'||!google.accounts){
+    setTimeout(initGoogleAuth,300); return;
   }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GCAL_CLIENT_ID,
-    scope: GCAL_SCOPE,
-    callback: async (resp) => {
-      if(resp.error) {
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GCAL_CLIENT_ID,
+    scope:GCAL_SCOPE,
+    callback:async(resp)=>{
+      if(resp.error){
         updateCalBadge('error');
-        alert('Google sign-in failed: ' + (resp.error_description || resp.error));
+        alert('Google sign-in failed: '+(resp.error_description||resp.error));
         return;
       }
-      gcalToken = resp.access_token;
-      document.getElementById('gcal-signin-btn').style.display = 'none';
-      document.getElementById('gcal-signout-btn').style.display = '';
+      gcalToken=resp.access_token;
+      document.getElementById('gcal-signin-btn').style.display='none';
+      document.getElementById('gcal-signout-btn').style.display='';
       updateCalBadge('syncing');
       await fetchCalendarEvents();
     }
   });
 }
 
-function gcalSignIn() {
-  if(!tokenClient) {
-    alert('Google auth is still loading. Please wait a moment and try again.');
-    return;
-  }
-  tokenClient.requestAccessToken({prompt: 'consent'});
+function gcalSignIn(){
+  if(!tokenClient){ alert('Google auth loading, please wait a moment.'); return; }
+  tokenClient.requestAccessToken({prompt:'consent'});
 }
 
-function gcalSignOut() {
-  if(gcalToken) google.accounts.oauth2.revoke(gcalToken, ()=>{});
-  gcalToken = null;
-  calendarEvents = [];
-  document.getElementById('gcal-signin-btn').style.display = '';
-  document.getElementById('gcal-signout-btn').style.display = 'none';
+function gcalSignOut(){
+  if(gcalToken) google.accounts.oauth2.revoke(gcalToken,()=>{});
+  gcalToken=null; calEvents=[];
+  document.getElementById('gcal-signin-btn').style.display='';
+  document.getElementById('gcal-signout-btn').style.display='none';
   updateCalBadge('signed-out');
   buildTodayTimeline();
+  if(currentView==='week') showWeekNoCal();
 }
 
-function updateCalBadge(state) {
-  const b = document.getElementById('cal-badge');
-  if(state==='synced'){ b.textContent='✓ Calendar synced'; b.className='badge badge-success'; }
-  else if(state==='syncing'){ b.textContent='Syncing...'; b.className='badge badge-saving'; }
-  else if(state==='error'){ b.textContent='Calendar error'; b.className='badge'; }
-  else { b.textContent='Not signed in'; b.className='badge'; b.style.color='var(--text-tertiary)'; }
-}
-
-async function fetchCalendarEvents() {
+async function fetchCalendarEvents(){
   if(!gcalToken) return;
-  try {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - ((now.getDay()+6)%7)); // Monday
-    weekStart.setHours(0,0,0,0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-
-    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${weekStart.toISOString()}&timeMax=${weekEnd.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=100`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${gcalToken}` } });
-    if(res.status === 401) { gcalSignOut(); return; }
-    if(!res.ok) { updateCalBadge('error'); return; }
-    const data = await res.json();
-    calendarEvents = (data.items || []).filter(e => e.start && (e.start.dateTime || e.start.date));
+  try{
+    const now=new Date(), mon=getMondayOf(now);
+    const end=new Date(mon); end.setDate(mon.getDate()+7);
+    const url=`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${mon.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=200`;
+    const res=await fetch(url,{headers:{Authorization:`Bearer ${gcalToken}`}});
+    if(res.status===401){ gcalSignOut(); return; }
+    if(!res.ok){ updateCalBadge('error'); return; }
+    const data=await res.json();
+    calEvents=(data.items||[]).filter(e=>e.start&&(e.start.dateTime||e.start.date));
     updateCalBadge('synced');
     buildTodayTimeline();
-    const weekPrompt = document.getElementById('week-signin-prompt');
-    const weekScroll = document.getElementById('week-grid-scroll');
-    if(weekPrompt) weekPrompt.style.display = 'none';
-    if(weekScroll){ weekScroll.style.display = 'flex'; weekScroll.style.flexDirection='column'; }
-    buildWeekWeatherBanner();
-    buildWeekGrid();
-  } catch(e) {
+    if(currentView==='week'){ showWeekGrid(); buildWeekGrid(); }
+  }catch(e){
     updateCalBadge('error');
-    console.error('Calendar fetch error:', e);
+    console.error('Calendar error:',e);
   }
-}
-
-function getEventsForDay(date) {
-  const dayStr = date.toISOString().split('T')[0];
-  return calendarEvents.filter(e => {
-    const start = e.start.dateTime ? new Date(e.start.dateTime) : new Date(e.start.date+'T00:00:00');
-    return start.toISOString().split('T')[0] === dayStr;
-  });
-}
-
-function fmtTime(dt) {
-  const d = new Date(dt);
-  let h = d.getHours(), m = d.getMinutes();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
-  return m === 0 ? `${h} ${ampm}` : `${h}:${String(m).padStart(2,'0')} ${ampm}`;
-}
-
-function fmtRange(start, end) {
-  if(!start.dateTime) return 'All day';
-  const s = fmtTime(start.dateTime);
-  const e = end?.dateTime ? fmtTime(end.dateTime) : '';
-  return e ? `${s}–${e}` : s;
-}
-
-// ─── Week grid ────────────────────────────────────────────────────────────────
-const WEEK_HOURS=[{l:'7 AM',h:7},{l:'8 AM',h:8},{l:'9 AM',h:9},{l:'10 AM',h:10},{l:'11 AM',h:11},{l:'12 PM',h:12},{l:'1 PM',h:13},{l:'2 PM',h:14},{l:'3 PM',h:15},{l:'4 PM',h:16},{l:'5 PM',h:17}];
-
-function buildWeekGrid(){
-  const grid = document.getElementById('week-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
-  monday.setHours(0,0,0,0);
-
-  // Update week header dates dynamically
-  const wh = document.getElementById('week-header');
-  if(wh) {
-    const dayNames = ['Mon','Tue','Wed','Thu','Fri'];
-    wh.querySelectorAll('.wh-day').forEach((cell,i) => {
-      const d = new Date(monday); d.setDate(monday.getDate()+i);
-      cell.querySelector('.wh-name').textContent = dayNames[i];
-      const numEl = cell.querySelector('.wh-num');
-      numEl.textContent = d.getDate();
-      numEl.className = 'wh-num' + (d.toDateString()===now.toDateString()?' today-num':'');
-    });
-  }
-
-  const nowH = now.getHours(), nowM = now.getMinutes();
-
-  WEEK_HOURS.forEach(hr => {
-    // Hour label
-    const lbl = document.createElement('div');
-    lbl.className = 'hr-label';
-    lbl.textContent = hr.l;
-    grid.appendChild(lbl);
-
-    // 5 day cells
-    for(let d = 0; d < 5; d++){
-      const cell = document.createElement('div');
-      cell.className = 'day-cell';
-
-      // Position relative so now-line can overlay
-      if(hr.h === nowH) cell.style.position = 'relative';
-
-      const dayDate = new Date(monday);
-      dayDate.setDate(monday.getDate() + d);
-
-      const dayEvs = getEventsForDay(dayDate).filter(e => {
-        if(!e.start.dateTime) return false;
-        return new Date(e.start.dateTime).getHours() === hr.h;
-      });
-
-      dayEvs.forEach(e => {
-        const div = document.createElement('div');
-        div.className = 'ev ev-gcal';
-        div.innerHTML = `<div class="ev-t">${esc(e.summary||'(no title)')}</div><div class="ev-m">${fmtRange(e.start,e.end)}</div>`;
-        cell.appendChild(div);
-      });
-
-      // Draw now line inside the correct hour row cells
-      if(hr.h === nowH) {
-        const pct = nowM / 60;
-        const line = document.createElement('div');
-        line.style.cssText = `position:absolute;left:0;right:0;top:${Math.round(pct*100)}%;height:1.5px;background:var(--red);pointer-events:none;z-index:2`;
-        cell.appendChild(line);
-        // Add dot only in first day cell
-        if(d === 0) {
-          const dot = document.createElement('div');
-          dot.style.cssText = `position:absolute;left:-3px;top:${Math.round(pct*100)}%;width:7px;height:7px;border-radius:50%;background:var(--red);transform:translateY(-50%);z-index:2`;
-          cell.appendChild(dot);
-        }
-      }
-
-      grid.appendChild(cell);
-    }
-  });
 }
 
 // ─── Weather ──────────────────────────────────────────────────────────────────
-async function fetchWeatherForCoords(lat, lon, locationName){
-  try {
+async function fetchWeatherForCoords(lat,lon,locationName){
+  try{
     const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Los_Angeles';
-    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,precipitation_probability_max&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&forecast_days=5`);
+    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,precipitation_probability_max,weathercode&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&forecast_days=5`);
     const d=await res.json();
     weatherData=d;
-    const curr=Math.round(d.current.temperature_2m);
-    const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',63:'Rain',71:'Light snow',80:'Rain showers',95:'Thunderstorm'};
-    document.getElementById('w-temp').textContent=curr+'°F';
+    const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',63:'Rain',71:'Light snow',80:'Showers',95:'Thunderstorm'};
+    document.getElementById('w-temp').textContent=Math.round(d.current.temperature_2m)+'°F';
     document.getElementById('w-cond').textContent=condMap[d.current.weathercode]||'Cloudy';
     document.getElementById('w-loc').textContent=locationName;
-    const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const highs=d.daily.temperature_2m_max, dates=d.daily.time, maxH=Math.max(...highs);
-    const daysEl=document.getElementById('w-days');
-    daysEl.innerHTML='';
+    const daysEl=document.getElementById('w-days'); daysEl.innerHTML='';
     highs.slice(0,4).forEach((h,i)=>{
-      const dn=dayNames[new Date(dates[i]+'T12:00:00').getDay()];
+      const dn=DAY_NAMES[new Date(dates[i]+'T12:00:00').getDay()];
       const w=Math.round(h/maxH*100), color=h>=75?'#378ADD':h>=65?'#639922':'#EF9F27';
       daysEl.innerHTML+=`<div class="ws-day"><span class="ws-dn">${dn}</span><div class="ws-bar"><div class="ws-fill" style="width:${w}%;background:${color}"></div></div><span class="ws-hi">${Math.round(h)}°</span></div>`;
     });
     const hi=Math.round(highs[0]);
-    const outfit=hi>=80?'Short sleeves, no jacket':hi>=70?'T-shirt + light layer':hi>=60?'Light jacket':'Jacket recommended';
+    const outfit=hi>=85?'Very hot — shorts & tee':hi>=75?'Warm — short sleeves':hi>=65?'T-shirt + light layer':hi>=55?'Light jacket':'Jacket recommended';
     document.getElementById('w-outfit').textContent='Today: '+outfit;
-    buildWeekWeatherBanner();
-  } catch(e){
+    // Update week weather banner if visible
+    if(currentView==='week') buildWeekWeather();
+  }catch(e){
     document.getElementById('w-cond').textContent='Weather unavailable';
     document.getElementById('w-outfit').textContent='Check weather manually';
   }
 }
 
-// ─── Week weather banner ──────────────────────────────────────────────────────
-const COND_ICON = {
-  0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',
-  51:'🌦',61:'🌧',63:'🌧',71:'❄️',80:'🌦',95:'⛈'
-};
-const OUTFIT_MAP = hi =>
-  hi>=85 ? {text:'Very hot — shorts & tee',color:'#E24B4A',bg:'#FCEBEB',tc:'#791F1F'} :
-  hi>=78 ? {text:'Warm — short sleeves',color:'#EF9F27',bg:'#FAEEDA',tc:'#633806'} :
-  hi>=68 ? {text:'T-shirt + light layer',color:'#378ADD',bg:'#E6F1FB',tc:'#0C447C'} :
-  hi>=58 ? {text:'Light jacket',color:'#639922',bg:'#EAF3DE',tc:'#27500A'} :
-           {text:'Jacket — cooler day',color:'#534AB7',bg:'#EEEDFE',tc:'#3C3489'};
-
-function buildWeekWeatherBanner(){
-  const banner = document.getElementById('week-weather-banner');
-  const cards  = document.getElementById('week-weather-cards');
-  if(!banner || !cards || !weatherData) return;
-
-  const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
-    45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',
-    63:'Rain',71:'Light snow',80:'Showers',95:'Thunderstorm'};
-  const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-  const highs  = weatherData.daily.temperature_2m_max;
-  const codes  = weatherData.daily.weathercode || [];
-  const pops   = weatherData.daily.precipitation_probability_max || [];
-  const dates  = weatherData.daily.time;
-
-  cards.innerHTML = '';
-  const count = Math.min(5, highs.length);
-  for(let i=0;i<count;i++){
-    const dt   = new Date(dates[i]+'T12:00:00');
-    const dn   = dayNames[dt.getDay()];
-    const hi   = Math.round(highs[i]);
-    const icon = COND_ICON[codes[i]] || '🌡';
-    const cond = condMap[codes[i]] || '';
-    const pop  = pops[i] ? Math.round(pops[i])+'% rain' : 'No rain';
-    const out  = OUTFIT_MAP(hi);
-    const isToday = dt.toDateString() === new Date().toDateString();
-
-    const card = document.createElement('div');
-    card.style.cssText = `background:${out.bg};border-radius:var(--radius-md);padding:9px 10px;display:flex;flex-direction:column;gap:3px;${isToday?'outline:2px solid '+out.color+';outline-offset:-2px':''}`;
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;font-weight:500;color:${out.tc}">${isToday?'Today':dn}</span>
-        <span style="font-size:16px;line-height:1">${icon}</span>
-      </div>
-      <div style="font-size:18px;font-weight:500;color:${out.tc}">${hi}°F</div>
-      <div style="font-size:10px;color:${out.color}">${cond} · ${pop}</div>
-      <div style="font-size:10px;color:${out.tc};border-top:0.5px solid ${out.color}33;padding-top:4px;margin-top:2px;line-height:1.3">${out.text}</div>
-    `;
-    cards.appendChild(card);
-  }
-  banner.style.display = '';
-}
-
-async function reverseGeocode(lat, lon){
-  try {
+async function reverseGeocode(lat,lon){
+  try{
     const res=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
     const d=await res.json();
     const city=d.address.city||d.address.town||d.address.village||d.address.county||'Your location';
     const state=d.address.state_code||d.address.state||'';
     return state?`${city}, ${state}`:city;
-  } catch(e){ return 'Your location'; }
+  }catch(e){ return 'Your location'; }
 }
 
 async function fetchWeather(){
@@ -918,17 +833,9 @@ async function fetchWeather(){
       ()=>{ fetchWeatherForCoords(37.4419,-122.1430,'Palo Alto, CA'); },
       {timeout:6000}
     );
-  } else {
+  }else{
     fetchWeatherForCoords(37.4419,-122.1430,'Palo Alto, CA');
   }
-}
-
-// ─── Date/time in topbar ──────────────────────────────────────────────────────
-function setTopbarDate(){
-  const now=new Date();
-  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('topbar-sub').textContent=`${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()} · leo.spaeder@gmail.com`;
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -936,13 +843,10 @@ loadData();
 renderTasks();
 renderProjects();
 buildTodayTimeline();
-setTopbarDate();
+showView('today', document.querySelector('.nav-item.active'));
 fetchWeather();
 initGoogleAuth();
-document.getElementById('action-btn').style.display='';
-
-// Refresh now-line every minute
-setInterval(()=>{ buildTodayTimeline(); }, 60000);
+setInterval(()=>{ buildTodayTimeline(); if(currentView==='week') buildWeekGrid(); }, 60000);
 </script>
 </body>
 </html>
