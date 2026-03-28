@@ -352,6 +352,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="sec-label">All tasks</div>
         <div class="add-form">
           <input type="text" id="new-task-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addTask()">
+          <input type="date" id="new-task-due" class="af-select" style="cursor:pointer;font-size:11px">
           <select class="af-select" id="new-task-tag"><option value="w">Work</option><option value="p">Personal</option><option value="o">Ops</option><option value="a">Admin</option></select>
           <select class="af-select" id="new-task-pri"><option value="h">High</option><option value="m">Med</option><option value="l">Low</option></select>
           <button class="af-btn" onclick="addTask()">Add</button>
@@ -906,7 +907,7 @@ function getAllTasksUnified(){
   const local=tasks.map(t=>({
     key:'local_'+t.id, text:t.text, done:t.done,
     tag:TAG_LABELS[t.tag]||'Task', tagClass:TAG_CLASSES[t.tag]||'tag-w', tagColor:null,
-    pri:t.pri, source:'local',
+    pri:t.pri, due:t.due||null, source:'local',
     onToggle:()=>{ t.done=!t.done; saveData(); renderTasks(); },
     onDelete:()=>{ tasks=tasks.filter(x=>x.id!==t.id); saveData(); renderTasks(); },
   }));
@@ -916,7 +917,7 @@ function getAllTasksUnified(){
       projTasks.push({
         key:'proj_'+proj.id+'_'+t.id, text:t.text, done:t.done,
         tag:proj.name.length>14?proj.name.slice(0,13)+'…':proj.name,
-        tagClass:'', tagColor:proj.color, pri:null, source:'project',
+        tagClass:'', tagColor:proj.color, pri:null, due:t.due||null, source:'project',
         onToggle:()=>{ t.done=!t.done; saveData(); renderTasks(); renderProjects(); },
         onDelete:null,
       });
@@ -929,16 +930,24 @@ function getAllTasksUnified(){
     onToggle:()=>toggleGoogleTask(t.listId,t.taskId,t.done),
     onDelete:null, due:t.due||null,
   }));
-  return [...local,...projTasks,...gTasks];
+  const all=[...local,...projTasks,...gTasks];
+  // Sort: open first by due asc (no due last), then done tasks
+  all.sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    if(!a.due&&!b.due) return 0;
+    if(!a.due) return 1;
+    if(!b.due) return -1;
+    return a.due<b.due?-1:a.due>b.due?1:0;
+  });
+  return all;
 }
 
 function renderTasks(){
   const list=document.getElementById('task-list');
   if(!list) return;
   list.innerHTML='';
-  const all=getAllTasksUnified();
-  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
-  [...open,...done].forEach(t=>{
+  const all=getAllTasksUnified(); // already sorted
+  all.forEach(t=>{
     const row=document.createElement('div'); row.className='task-row';
     const checkDiv=document.createElement('div');
     checkDiv.className='check'+(t.done?' done':'');
@@ -952,13 +961,27 @@ function renderTasks(){
     if(t.tagColor&&!t.tagClass) tagSpan.style.cssText=`background:${t.tagColor}22;color:${t.tagColor};border:0.5px solid ${t.tagColor}44`;
     row.appendChild(checkDiv); row.appendChild(textDiv); row.appendChild(tagSpan);
     if(t.pri){ const d=document.createElement('div'); d.className='pdot '+(PRI_CLASSES[t.pri]||'pm'); row.appendChild(d); }
-    if(t.due){ const s=document.createElement('span'); s.style.cssText='font-size:10px;color:var(--text-tertiary);white-space:nowrap'; s.textContent=new Date(t.due).toLocaleDateString('en-US',{month:'short',day:'numeric'}); row.appendChild(s); }
+    // Due date pill — always shown, styled by overdue state
+    const dueFmt=t.due?fmtDue(t.due):null;
+    const dueSpan=document.createElement('span');
+    dueSpan.style.cssText='font-size:10px;white-space:nowrap;padding:2px 6px;border-radius:8px;font-weight:500';
+    if(dueFmt){
+      dueSpan.textContent=new Date(t.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      if(dueFmt.overdue){ dueSpan.style.background='#FCEBEB'; dueSpan.style.color='#791F1F'; }
+      else{ dueSpan.style.background='var(--bg-secondary)'; dueSpan.style.color='var(--text-tertiary)'; }
+    } else {
+      dueSpan.textContent='No date';
+      dueSpan.style.background='var(--bg-secondary)';
+      dueSpan.style.color='var(--text-tertiary)';
+      dueSpan.style.opacity='0.5';
+    }
+    row.appendChild(dueSpan);
     if(t.onDelete){ const del=document.createElement('button'); del.className='del-btn'; del.innerHTML='&#215;'; del.onclick=t.onDelete; row.appendChild(del); }
     list.appendChild(row);
   });
   document.getElementById('st-total').textContent=all.length;
-  document.getElementById('st-open').textContent=open.length;
-  document.getElementById('st-done').textContent=done.length;
+  document.getElementById('st-open').textContent=all.filter(t=>!t.done).length;
+  document.getElementById('st-done').textContent=all.filter(t=>t.done).length;
   buildTodayTimeline();
 }
 function toggleTask(id){ const t=tasks.find(t=>t.id===id); if(t){t.done=!t.done;renderTasks();saveData();} }
@@ -966,8 +989,10 @@ function deleteTask(id){ tasks=tasks.filter(t=>t.id!==id);renderTasks();saveData
 function addTask(){
   const inp=document.getElementById('new-task-input'), text=inp.value.trim();
   if(!text) return;
-  tasks.unshift({id:nextTaskId++,text,tag:document.getElementById('new-task-tag').value,pri:document.getElementById('new-task-pri').value,done:false});
-  inp.value=''; renderTasks(); saveData();
+  const due=document.getElementById('new-task-due').value||null;
+  tasks.unshift({id:nextTaskId++,text,tag:document.getElementById('new-task-tag').value,pri:document.getElementById('new-task-pri').value,done:false,due});
+  inp.value=''; document.getElementById('new-task-due').value='';
+  renderTasks(); saveData();
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
