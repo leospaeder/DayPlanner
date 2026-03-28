@@ -1028,28 +1028,17 @@ function buildProjectCard(proj){
   const p=pct(proj);
   const card=document.createElement('div'); card.className='project-card'; card.style.marginBottom='10px';
   if(proj.status==='archived') card.style.opacity='0.6';
-  card.draggable=true;
+  card.draggable=false;
   card.dataset.projId=proj.id;
-  let projDragFromHandle = false;
-
-  let projDragFromHandle = false;
 
   card.addEventListener('dragstart',e=>{
-    if(!projDragFromHandle){ e.preventDefault(); return; }
-    projDragFromHandle=false;
     e.dataTransfer.effectAllowed='move';
     e.dataTransfer.setData('text/plain',JSON.stringify({type:'project',projId:proj.id,status:proj.status||'active'}));
     setTimeout(()=>card.classList.add('proj-dragging'),0);
   });
-  card.addEventListener('dragend',()=>{
-    projDragFromHandle=false;
-    card.classList.remove('proj-dragging');
-  });
+  card.addEventListener('dragend',()=>{ card.draggable=false; card.classList.remove('proj-dragging'); });
   card.addEventListener('dragover',e=>{ e.preventDefault(); card.classList.add('proj-drag-over'); });
-  card.addEventListener('dragleave',e=>{
-    if(card.contains(e.relatedTarget)) return;
-    card.classList.remove('proj-drag-over');
-  });
+  card.addEventListener('dragleave',e=>{ if(!card.contains(e.relatedTarget)) card.classList.remove('proj-drag-over'); });
   card.addEventListener('drop',e=>{
     e.preventDefault(); card.classList.remove('proj-drag-over');
     try{
@@ -1072,10 +1061,7 @@ function buildProjectCard(proj){
   // Drag handle — enables card dragging only when held
   const dragHandle=document.createElement('div'); dragHandle.className='proj-drag';
   dragHandle.innerHTML='<span></span><span></span><span></span>';
-  dragHandle.addEventListener('mousedown',e=>{
-    e.stopPropagation();
-    projDragFromHandle=true;
-  });
+  dragHandle.addEventListener('mousedown',e=>{ e.stopPropagation(); card.draggable=true; });
 
   // Chevron
   const chev=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -1125,16 +1111,14 @@ function buildProjectCard(proj){
   const taskContainer=document.createElement('div');
   taskContainer.className='proj-tasks'+(proj.expanded?' open':'');
 
-  let dragFromHandle = false;
-
   proj.tasks.forEach((t)=>{
     const ptRow=document.createElement('div');
-    ptRow.className='pt-row'; ptRow.draggable=true;
+    ptRow.className='pt-row'; ptRow.draggable=false;
     ptRow.dataset.taskId=t.id;
 
     const handle=document.createElement('div'); handle.className='pt-drag';
     handle.innerHTML='<span></span><span></span><span></span>';
-    handle.addEventListener('mousedown',e=>{ e.stopPropagation(); dragFromHandle=true; });
+    handle.addEventListener('mousedown',e=>{ e.stopPropagation(); ptRow.draggable=true; });
 
     const chk=document.createElement('div'); chk.className='pt-check'+(t.done?' done':'');
     chk.onclick=e=>{ e.stopPropagation(); togglePT(proj.id,t.id); };
@@ -1156,18 +1140,13 @@ function buildProjectCard(proj){
     ptRow.appendChild(handle); ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(taskDue); ptRow.appendChild(del);
 
     ptRow.addEventListener('dragstart',e=>{
-      if(!dragFromHandle){ e.preventDefault(); return; }
-      dragFromHandle=false;
       e.dataTransfer.effectAllowed='move';
       e.dataTransfer.setData('text/plain',JSON.stringify({type:'task',projId:proj.id,taskId:t.id}));
       setTimeout(()=>ptRow.classList.add('dragging'),0);
     });
-    ptRow.addEventListener('dragend',()=>{ ptRow.classList.remove('dragging'); dragFromHandle=false; });
+    ptRow.addEventListener('dragend',()=>{ ptRow.draggable=false; ptRow.classList.remove('dragging'); });
     ptRow.addEventListener('dragover',e=>{ e.preventDefault(); ptRow.classList.add('drag-over'); });
-    ptRow.addEventListener('dragleave',e=>{
-      if(ptRow.contains(e.relatedTarget)) return;
-      ptRow.classList.remove('drag-over');
-    });
+    ptRow.addEventListener('dragleave',e=>{ if(!ptRow.contains(e.relatedTarget)) ptRow.classList.remove('drag-over'); });
     ptRow.addEventListener('drop',e=>{
       e.preventDefault(); ptRow.classList.remove('drag-over');
       try{
