@@ -118,7 +118,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-del-btn{width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;opacity:0;transition:opacity .1s;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:2px}
 .project-card:hover .proj-del-btn{opacity:1}
 .proj-del-btn:hover{color:var(--red);background:var(--red-bg)}
-.proj-status-btn{font-size:10px;padding:2px 7px;border-radius:8px;border:0.5px solid var(--border-light);background:transparent;cursor:pointer;white-space:nowrap;color:var(--text-secondary)}
+.proj-drag{display:flex;flex-direction:column;gap:2px;padding:3px 2px;cursor:grab;opacity:0;transition:opacity .1s;flex-shrink:0}
+.proj-drag span{display:block;width:12px;height:1.5px;background:var(--text-tertiary);border-radius:1px}
+.project-card:hover .proj-drag{opacity:1}
+.proj-drag:active{cursor:grabbing}
+.project-card.proj-dragging{opacity:.4}
+.project-card.proj-drag-over{border-top:2px solid var(--blue-border)}
 .proj-status-btn:hover{background:var(--bg-secondary)}
 .status-active{background:var(--success-bg);color:var(--success-text);border-color:var(--green-border)}
 .status-inactive{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}
@@ -249,6 +254,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="padding:4px 14px 8px;display:flex;flex-direction:column;gap:6px">
       <button id="gcal-signin-btn" onclick="gcalSignIn()" style="background:var(--blue-border);border:none;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:white;cursor:pointer;width:100%">Sign in to Google</button>
       <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
+      <button id="gcal-sync-btn" onclick="syncProjectTasksFromGoogle()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#8635; Sync projects</button>
     </div>
   </div>
   <div class="weather-sb">
@@ -1010,13 +1016,44 @@ function updateProjectDue(id,val){
 }
 function updateTaskDue(pid,tid,val){
   const p=projects.find(p=>p.id===pid); if(!p) return;
-  const t=p.tasks.find(t=>t.id===tid); if(t){t.due=val||null; saveData();}
+  const t=p.tasks.find(t=>t.id===tid); if(!t) return;
+  t.due=val||null; saveData();
+  if(gcalToken&&p.gTaskListId&&t.gTaskId){
+    const patch=t.due?{due:new Date(t.due+'T12:00:00').toISOString()}:{due:null};
+    patchGTask(p.gTaskListId,t.gTaskId,patch);
+  }
 }
 
 function buildProjectCard(proj){
   const p=pct(proj);
   const card=document.createElement('div'); card.className='project-card'; card.style.marginBottom='10px';
   if(proj.status==='archived') card.style.opacity='0.6';
+  card.draggable=true;
+  card.dataset.projId=proj.id;
+
+  // Card-level drag events for reordering
+  card.addEventListener('dragstart',e=>{
+    // Only start if drag originated from the handle
+    if(!e.target.closest('.proj-drag')) { e.preventDefault(); return; }
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('text/plain',JSON.stringify({type:'project',projId:proj.id,status:proj.status||'active'}));
+    setTimeout(()=>card.classList.add('proj-dragging'),0);
+  });
+  card.addEventListener('dragend',()=>card.classList.remove('proj-dragging'));
+  card.addEventListener('dragover',e=>{
+    if(!e.dataTransfer.types.includes('text/plain')) return;
+    e.preventDefault(); card.classList.add('proj-drag-over');
+  });
+  card.addEventListener('dragleave',()=>card.classList.remove('proj-drag-over'));
+  card.addEventListener('drop',e=>{
+    e.preventDefault(); card.classList.remove('proj-drag-over');
+    try{
+      const data=JSON.parse(e.dataTransfer.getData('text/plain'));
+      if(data.type==='project' && data.projId!==proj.id && data.status===(proj.status||'active')){
+        moveProject(data.projId, proj.id);
+      }
+    }catch(_){}
+  });
 
   // Header
   const header=document.createElement('div'); header.className='proj-header';
@@ -1026,6 +1063,11 @@ function buildProjectCard(proj){
   const colorDot=document.createElement('div'); colorDot.className='proj-color'; colorDot.style.background=proj.color;
   const nameDiv=document.createElement('div'); nameDiv.className='proj-name'; nameDiv.textContent=proj.name;
   const pctDiv=document.createElement('div'); pctDiv.className='proj-pct'; pctDiv.textContent=p+'%';
+
+  // Drag handle
+  const dragHandle=document.createElement('div'); dragHandle.className='proj-drag';
+  dragHandle.innerHTML='<span></span><span></span><span></span>';
+  dragHandle.addEventListener('mousedown',e=>e.stopPropagation());
 
   // Chevron
   const chev=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -1046,7 +1088,7 @@ function buildProjectCard(proj){
   const delBtn=document.createElement('button'); delBtn.className='proj-del-btn'; delBtn.innerHTML='&#215;';
   delBtn.onclick=e=>{ e.stopPropagation(); deleteProject(proj.id); };
 
-  header.appendChild(colorDot); header.appendChild(nameDiv); header.appendChild(pctDiv);
+  header.appendChild(dragHandle); header.appendChild(colorDot); header.appendChild(nameDiv); header.appendChild(pctDiv);
   header.appendChild(chev); header.appendChild(statusBtn); header.appendChild(delBtn);
   card.appendChild(header);
 
@@ -1141,14 +1183,154 @@ function cycleStatus(id){
   renderProjects(); saveData();
 }
 
+// ─── Project ↔ Google Tasks sync ─────────────────────────────────────────────
+
+// Ensure a Google Tasks list exists for a project, create if needed
+async function ensureGTaskList(proj){
+  if(!gcalToken) return null;
+  if(proj.gTaskListId) return proj.gTaskListId;
+  try{
+    const res=await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify({title:proj.name})
+    });
+    if(!res.ok) return null;
+    const data=await res.json();
+    proj.gTaskListId=data.id;
+    saveData();
+    return data.id;
+  }catch(e){ console.error('Create list error:',e); return null; }
+}
+
+// Create a task in Google Tasks for a project task
+async function createGTask(proj, task){
+  if(!gcalToken) return;
+  const listId=await ensureGTaskList(proj);
+  if(!listId) return;
+  try{
+    const body={title:task.text};
+    if(task.due) body.due=new Date(task.due+'T12:00:00').toISOString();
+    const res=await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!res.ok) return;
+    const data=await res.json();
+    task.gTaskId=data.id;
+    saveData();
+  }catch(e){ console.error('Create task error:',e); }
+}
+
+// Patch status or due date of a Google Task
+async function patchGTask(listId, gTaskId, patch){
+  if(!gcalToken||!listId||!gTaskId) return;
+  try{
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${gTaskId}`,{
+      method:'PATCH',
+      headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify(patch)
+    });
+  }catch(e){ console.error('Patch task error:',e); }
+}
+
+// Delete a Google Task
+async function deleteGTask(listId, gTaskId){
+  if(!gcalToken||!listId||!gTaskId) return;
+  try{
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${gTaskId}`,{
+      method:'DELETE',
+      headers:{Authorization:`Bearer ${gcalToken}`}
+    });
+  }catch(e){ console.error('Delete task error:',e); }
+}
+
+// Pull changes from Google Tasks back into project tasks
+async function syncProjectTasksFromGoogle(){
+  if(!gcalToken) return;
+  for(const proj of projects){
+    if(!proj.gTaskListId) continue;
+    try{
+      const res=await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${proj.gTaskListId}/tasks?showCompleted=true&maxResults=100`,{
+        headers:{Authorization:`Bearer ${gcalToken}`}
+      });
+      if(!res.ok) continue;
+      const data=await res.json();
+      const gItems=data.items||[];
+      // Update local tasks that have a gTaskId
+      proj.tasks.forEach(t=>{
+        if(!t.gTaskId) return;
+        const gTask=gItems.find(g=>g.id===t.gTaskId);
+        if(!gTask) return;
+        t.done=gTask.status==='completed';
+        t.text=gTask.title||t.text;
+        if(gTask.due) t.due=gTask.due.split('T')[0];
+      });
+      // Add any Google Tasks not yet in local project (created in Google Calendar)
+      gItems.forEach(g=>{
+        if(!g.title||g.title.trim()==='') return;
+        const exists=proj.tasks.find(t=>t.gTaskId===g.id);
+        if(!exists){
+          proj.tasks.push({
+            id:nextPtId++, text:g.title, done:g.status==='completed',
+            due:g.due?g.due.split('T')[0]:null, gTaskId:g.id
+          });
+        }
+      });
+    }catch(e){ console.error('Sync project tasks error:',e); }
+  }
+  saveData();
+  renderProjects();
+  renderTasks();
+}
+
+function moveProject(fromId, toId){
+  const fromIdx=projects.findIndex(p=>p.id===fromId);
+  const toIdx=projects.findIndex(p=>p.id===toId);
+  if(fromIdx<0||toIdx<0) return;
+  const [moved]=projects.splice(fromIdx,1);
+  // Recalculate toIdx after splice
+  const newToIdx=projects.findIndex(p=>p.id===toId);
+  projects.splice(newToIdx,0,moved);
+  renderProjects(); saveData();
+}
+
 function movePT(pid,fromIdx,toIdx){
   const p=projects.find(p=>p.id===pid); if(!p) return;
   const [moved]=p.tasks.splice(fromIdx,1); p.tasks.splice(toIdx,0,moved);
   renderProjects(); saveData();
 }
-function togglePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(!p)return; const t=p.tasks.find(t=>t.id===tid); if(t){t.done=!t.done;renderProjects();saveData();} }
-function deletePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();} }
-function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():''; if(!text)return; const dueInp=document.getElementById('pt-due-'+pid); const due=dueInp?dueInp.value||null:null; const p=projects.find(p=>p.id===pid); if(p){p.tasks.push({id:nextPtId++,text,done:false,due});renderProjects();saveData();} }
+
+function togglePT(pid,tid){
+  const p=projects.find(p=>p.id===pid); if(!p) return;
+  const t=p.tasks.find(t=>t.id===tid); if(!t) return;
+  t.done=!t.done;
+  renderProjects(); saveData(); renderTasks();
+  if(gcalToken&&p.gTaskListId&&t.gTaskId){
+    const newStatus=t.done?'completed':'needsAction';
+    patchGTask(p.gTaskListId,t.gTaskId,{status:newStatus,completed:t.done?new Date().toISOString():null});
+  }
+}
+
+function deletePT(pid,tid){
+  const p=projects.find(p=>p.id===pid); if(!p) return;
+  const t=p.tasks.find(t=>t.id===tid);
+  if(t&&gcalToken&&p.gTaskListId&&t.gTaskId) deleteGTask(p.gTaskListId,t.gTaskId);
+  p.tasks=p.tasks.filter(t=>t.id!==tid);
+  renderProjects(); saveData();
+}
+
+function addPT(pid){
+  const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():'';
+  if(!text) return;
+  const dueInp=document.getElementById('pt-due-'+pid); const due=dueInp?dueInp.value||null:null;
+  const p=projects.find(p=>p.id===pid); if(!p) return;
+  const newTask={id:nextPtId++,text,done:false,due};
+  p.tasks.push(newTask);
+  renderProjects(); saveData();
+  if(gcalToken) createGTask(p,newTask);
+}
 function deleteProject(id){ if(!confirm('Delete this project and all its tasks?'))return; projects=projects.filter(p=>p.id!==id);renderProjects();saveData(); }
 function showNewProjForm(){ document.getElementById('new-proj-form').classList.add('open'); document.getElementById('nf-name').focus(); }
 function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; document.getElementById('nf-due').value=''; }
@@ -1179,9 +1361,11 @@ function initGoogleAuth(){
       gcalToken=resp.access_token;
       document.getElementById('gcal-signin-btn').style.display='none';
       document.getElementById('gcal-signout-btn').style.display='';
+      document.getElementById('gcal-sync-btn').style.display='';
       updateCalBadge('syncing');
       await fetchCalendarEvents();
       await fetchGoogleTasks();
+      await syncProjectTasksFromGoogle();
     }
   });
 }
@@ -1196,6 +1380,7 @@ function gcalSignOut(){
   gcalToken=null; calEvents=[]; googleTasks=[];
   document.getElementById('gcal-signin-btn').style.display='';
   document.getElementById('gcal-signout-btn').style.display='none';
+  document.getElementById('gcal-sync-btn').style.display='none';
   updateCalBadge('signed-out');
   buildTodayTimeline();
   if(currentView==='week') showWeekNoCal();
