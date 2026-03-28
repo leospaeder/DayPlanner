@@ -1028,22 +1028,20 @@ function buildProjectCard(proj){
   const p=pct(proj);
   const card=document.createElement('div'); card.className='project-card'; card.style.marginBottom='10px';
   if(proj.status==='archived') card.style.opacity='0.6';
-  card.draggable=true;
+  card.draggable=false; // enabled only when handle is held
   card.dataset.projId=proj.id;
 
-  // Card-level drag events for reordering
+  // Card-level drag events
   card.addEventListener('dragstart',e=>{
-    // Only start if drag originated from the handle
-    if(!e.target.closest('.proj-drag')) { e.preventDefault(); return; }
     e.dataTransfer.effectAllowed='move';
     e.dataTransfer.setData('text/plain',JSON.stringify({type:'project',projId:proj.id,status:proj.status||'active'}));
     setTimeout(()=>card.classList.add('proj-dragging'),0);
   });
-  card.addEventListener('dragend',()=>card.classList.remove('proj-dragging'));
-  card.addEventListener('dragover',e=>{
-    if(!e.dataTransfer.types.includes('text/plain')) return;
-    e.preventDefault(); card.classList.add('proj-drag-over');
+  card.addEventListener('dragend',()=>{
+    card.draggable=false;
+    card.classList.remove('proj-dragging');
   });
+  card.addEventListener('dragover',e=>{ e.preventDefault(); card.classList.add('proj-drag-over'); });
   card.addEventListener('dragleave',()=>card.classList.remove('proj-drag-over'));
   card.addEventListener('drop',e=>{
     e.preventDefault(); card.classList.remove('proj-drag-over');
@@ -1064,10 +1062,15 @@ function buildProjectCard(proj){
   const nameDiv=document.createElement('div'); nameDiv.className='proj-name'; nameDiv.textContent=proj.name;
   const pctDiv=document.createElement('div'); pctDiv.className='proj-pct'; pctDiv.textContent=p+'%';
 
-  // Drag handle
+  // Drag handle — enables card dragging only when held
   const dragHandle=document.createElement('div'); dragHandle.className='proj-drag';
   dragHandle.innerHTML='<span></span><span></span><span></span>';
-  dragHandle.addEventListener('mousedown',e=>e.stopPropagation());
+  dragHandle.addEventListener('mousedown',e=>{
+    e.stopPropagation(); // prevent header collapse click
+    card.draggable=true;
+  });
+  document.addEventListener('mouseup',()=>{ card.draggable=false; }, {once:false});
+  dragHandle.addEventListener('mouseleave',()=>{ if(!card.classList.contains('proj-dragging')) card.draggable=false; });
 
   // Chevron
   const chev=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -1119,12 +1122,16 @@ function buildProjectCard(proj){
 
   proj.tasks.forEach((t,idx)=>{
     const ptRow=document.createElement('div');
-    ptRow.className='pt-row'; ptRow.draggable=true;
+    ptRow.className='pt-row'; ptRow.draggable=false;
     ptRow.dataset.projId=proj.id; ptRow.dataset.taskIdx=idx;
 
     const handle=document.createElement('div'); handle.className='pt-drag';
     handle.innerHTML='<span></span><span></span><span></span>';
-    handle.addEventListener('mousedown',e=>e.stopPropagation());
+    handle.addEventListener('mousedown',e=>{
+      e.stopPropagation();
+      ptRow.draggable=true;
+    });
+    handle.addEventListener('mouseleave',()=>{ if(!ptRow.classList.contains('dragging')) ptRow.draggable=false; });
 
     const chk=document.createElement('div'); chk.className='pt-check'+(t.done?' done':'');
     chk.onclick=e=>{ e.stopPropagation(); togglePT(proj.id,t.id); };
@@ -1151,7 +1158,7 @@ function buildProjectCard(proj){
       e.dataTransfer.setData('text/plain',JSON.stringify({projId:proj.id,fromIdx:idx}));
       setTimeout(()=>ptRow.classList.add('dragging'),0);
     });
-    ptRow.addEventListener('dragend',()=>ptRow.classList.remove('dragging'));
+    ptRow.addEventListener('dragend',()=>{ ptRow.draggable=false; ptRow.classList.remove('dragging'); });
     ptRow.addEventListener('dragover',e=>{ e.preventDefault(); ptRow.classList.add('drag-over'); });
     ptRow.addEventListener('dragleave',()=>ptRow.classList.remove('drag-over'));
     ptRow.addEventListener('drop',e=>{
