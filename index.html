@@ -1042,7 +1042,10 @@ function buildProjectCard(proj){
     card.classList.remove('proj-dragging');
   });
   card.addEventListener('dragover',e=>{ e.preventDefault(); card.classList.add('proj-drag-over'); });
-  card.addEventListener('dragleave',()=>card.classList.remove('proj-drag-over'));
+  card.addEventListener('dragleave',e=>{
+    if(card.contains(e.relatedTarget)) return;
+    card.classList.remove('proj-drag-over');
+  });
   card.addEventListener('drop',e=>{
     e.preventDefault(); card.classList.remove('proj-drag-over');
     try{
@@ -1120,10 +1123,10 @@ function buildProjectCard(proj){
   const taskContainer=document.createElement('div');
   taskContainer.className='proj-tasks'+(proj.expanded?' open':'');
 
-  proj.tasks.forEach((t,idx)=>{
+  proj.tasks.forEach((t)=>{
     const ptRow=document.createElement('div');
     ptRow.className='pt-row'; ptRow.draggable=false;
-    ptRow.dataset.projId=proj.id; ptRow.dataset.taskIdx=idx;
+    ptRow.dataset.taskId=t.id;
 
     const handle=document.createElement('div'); handle.className='pt-drag';
     handle.innerHTML='<span></span><span></span><span></span>';
@@ -1142,7 +1145,6 @@ function buildProjectCard(proj){
     const del=document.createElement('button'); del.className='pt-del'; del.innerHTML='&#215;';
     del.onclick=e=>{ e.stopPropagation(); deletePT(proj.id,t.id); };
 
-    // Task due date
     const taskDue=document.createElement('input'); taskDue.type='date'; taskDue.className='pt-due';
     if(t.due) taskDue.value=t.due;
     const tf=fmtDue(t.due);
@@ -1155,16 +1157,24 @@ function buildProjectCard(proj){
 
     ptRow.addEventListener('dragstart',e=>{
       e.dataTransfer.effectAllowed='move';
-      e.dataTransfer.setData('text/plain',JSON.stringify({projId:proj.id,fromIdx:idx}));
+      e.dataTransfer.setData('text/plain',JSON.stringify({type:'task',projId:proj.id,taskId:t.id}));
       setTimeout(()=>ptRow.classList.add('dragging'),0);
     });
     ptRow.addEventListener('dragend',()=>{ ptRow.draggable=false; ptRow.classList.remove('dragging'); });
     ptRow.addEventListener('dragover',e=>{ e.preventDefault(); ptRow.classList.add('drag-over'); });
-    ptRow.addEventListener('dragleave',()=>ptRow.classList.remove('drag-over'));
+    // Use relatedTarget to avoid flicker when crossing into child elements
+    ptRow.addEventListener('dragleave',e=>{
+      if(ptRow.contains(e.relatedTarget)) return;
+      ptRow.classList.remove('drag-over');
+    });
     ptRow.addEventListener('drop',e=>{
       e.preventDefault(); ptRow.classList.remove('drag-over');
-      try{ const {projId,fromIdx}=JSON.parse(e.dataTransfer.getData('text/plain'));
-        if(projId===proj.id&&fromIdx!==idx) movePT(proj.id,fromIdx,idx); }catch(_){}
+      try{
+        const data=JSON.parse(e.dataTransfer.getData('text/plain'));
+        if(data.type==='task' && data.projId===proj.id && data.taskId!==t.id){
+          movePT(proj.id, data.taskId, t.id);
+        }
+      }catch(_){}
     });
     taskContainer.appendChild(ptRow);
   });
@@ -1303,9 +1313,15 @@ function moveProject(fromId, toId){
   renderProjects(); saveData();
 }
 
-function movePT(pid,fromIdx,toIdx){
+function movePT(pid, fromTaskId, toTaskId){
   const p=projects.find(p=>p.id===pid); if(!p) return;
-  const [moved]=p.tasks.splice(fromIdx,1); p.tasks.splice(toIdx,0,moved);
+  const fromIdx=p.tasks.findIndex(t=>t.id===fromTaskId);
+  const toIdx=p.tasks.findIndex(t=>t.id===toTaskId);
+  if(fromIdx<0||toIdx<0||fromIdx===toIdx) return;
+  const [moved]=p.tasks.splice(fromIdx,1);
+  // Recalculate toIdx after splice since array shifted
+  const newToIdx=p.tasks.findIndex(t=>t.id===toTaskId);
+  p.tasks.splice(newToIdx,0,moved);
   renderProjects(); saveData();
 }
 
