@@ -123,8 +123,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
 .proj-tasks.open{display:flex}
-.pt-row{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--bg-secondary);border-radius:var(--radius-md);cursor:pointer}
-.pt-row:hover{background:var(--bg-tertiary)}
+.pt-row{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--bg-secondary);border-radius:var(--radius-md)}
+.pt-row.dragging{opacity:.4}
+.pt-row.drag-over{border-top:2px solid var(--blue-border)}
+.pt-drag{display:flex;flex-direction:column;gap:2px;padding:2px 2px;cursor:grab;opacity:0;transition:opacity .1s;flex-shrink:0}
+.pt-drag span{display:block;width:10px;height:1.5px;background:var(--text-tertiary);border-radius:1px}
+.pt-row:hover .pt-drag{opacity:1}
+.pt-drag:active{cursor:grabbing}
 .pt-check{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border-mid);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .pt-check.done{background:#639922;border-color:#639922}
 .pt-check.done::after{content:'';display:block;width:3px;height:5px;border:1.5px solid white;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
@@ -375,7 +380,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const TASK_KEY = 'dayplanner_tasks_v2';
 const PROJ_KEY = 'dayplanner_projects_v2';
 const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks';
 
 // ─── Default data ─────────────────────────────────────────────────────────────
 const DEFAULT_TASKS = [
@@ -430,6 +435,7 @@ let tasks = [], projects = [], nextTaskId = 200, nextProjId = 300, nextPtId = 50
 let weatherData = null;
 let gcalToken = null;
 let calEvents = [];
+let googleTasks = []; // tasks fetched from Google Tasks API
 let tokenClient = null;
 let currentView = 'today';
 let weekOffset = 0; // 0 = current week, -1 = last week, +1 = next week
@@ -827,17 +833,113 @@ function buildWeekWeather(){
   }
 }
 
-// ─── Tasks ────────────────────────────────────────────────────────────────────
+async function fetchGoogleTasks(){
+  if(!gcalToken) return;
+  try{
+    // Get all task lists
+    const listsRes=await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=20',{
+      headers:{Authorization:`Bearer ${gcalToken}`}
+    });
+    if(!listsRes.ok) return;
+    const listsData=await listsRes.json();
+    const lists=listsData.items||[];
+    // Fetch tasks from all lists
+    const allTasks=[];
+    await Promise.all(lists.map(async list=>{
+      const tasksRes=await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${list.id}/tasks?showCompleted=true&maxResults=100`,{
+        headers:{Authorization:`Bearer ${gcalToken}`}
+      });
+      if(!tasksRes.ok) return;
+      const tasksData=await tasksRes.json();
+      (tasksData.items||[]).forEach(t=>{
+        allTasks.push({
+          id:'gtask_'+t.id,
+          text:t.title||'(no title)',
+          done:t.status==='completed',
+          listTitle:list.title,
+          listId:list.id,
+          taskId:t.id,
+          due:t.due||null,
+          notes:t.notes||null,
+          source:'google'
+        });
+      });
+    }));
+    googleTasks=allTasks.filter(t=>t.text.trim());
+    renderTasks();
+  }catch(e){ console.error('Google Tasks error:',e); }
+}
+
+async function toggleGoogleTask(listId, taskId, currentlyDone){
+  if(!gcalToken) return;
+  try{
+    const newStatus=currentlyDone?'needsAction':'completed';
+    await fetch(`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks/${taskId}`,{
+      method:'PATCH',
+      headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify({status:newStatus, completed:newStatus==='completed'?new Date().toISOString():null})
+    });
+    // Update local state
+    const t=googleTasks.find(t=>t.taskId===taskId);
+    if(t) t.done=!currentlyDone;
+    renderTasks();
+  }catch(e){ console.error('Toggle task error:',e); }
+}
+function getAllTasksUnified(){
+  const local=tasks.map(t=>({
+    key:'local_'+t.id, text:t.text, done:t.done,
+    tag:TAG_LABELS[t.tag]||'Task', tagClass:TAG_CLASSES[t.tag]||'tag-w', tagColor:null,
+    pri:t.pri, source:'local',
+    onToggle:()=>{ t.done=!t.done; saveData(); renderTasks(); },
+    onDelete:()=>{ tasks=tasks.filter(x=>x.id!==t.id); saveData(); renderTasks(); },
+  }));
+  const projTasks=[];
+  projects.forEach(proj=>{
+    proj.tasks.forEach(t=>{
+      projTasks.push({
+        key:'proj_'+proj.id+'_'+t.id, text:t.text, done:t.done,
+        tag:proj.name.length>14?proj.name.slice(0,13)+'…':proj.name,
+        tagClass:'', tagColor:proj.color, pri:null, source:'project',
+        onToggle:()=>{ t.done=!t.done; saveData(); renderTasks(); renderProjects(); },
+        onDelete:null,
+      });
+    });
+  });
+  const gTasks=googleTasks.map(t=>({
+    key:t.id, text:t.text, done:t.done,
+    tag:t.listTitle||'Tasks', tagClass:'', tagColor:'#1D9E75',
+    pri:null, source:'google',
+    onToggle:()=>toggleGoogleTask(t.listId,t.taskId,t.done),
+    onDelete:null, due:t.due||null,
+  }));
+  return [...local,...projTasks,...gTasks];
+}
+
 function renderTasks(){
   const list=document.getElementById('task-list');
+  if(!list) return;
   list.innerHTML='';
-  const open=tasks.filter(t=>!t.done), done=tasks.filter(t=>t.done);
+  const all=getAllTasksUnified();
+  const open=all.filter(t=>!t.done), done=all.filter(t=>t.done);
   [...open,...done].forEach(t=>{
     const row=document.createElement('div'); row.className='task-row';
-    row.innerHTML=`<div class="check${t.done?' done':''}" onclick="toggleTask(${t.id})"></div><div class="task-text${t.done?' done':''}">${esc(t.text)}</div><span class="tag ${TAG_CLASSES[t.tag]||'tag-w'}">${TAG_LABELS[t.tag]||''}</span><div class="pdot ${PRI_CLASSES[t.pri]||'pm'}"></div><button class="del-btn" onclick="deleteTask(${t.id})">&#215;</button>`;
+    const checkDiv=document.createElement('div');
+    checkDiv.className='check'+(t.done?' done':'');
+    checkDiv.onclick=t.onToggle;
+    const textDiv=document.createElement('div');
+    textDiv.className='task-text'+(t.done?' done':'');
+    textDiv.textContent=t.text;
+    const tagSpan=document.createElement('span');
+    tagSpan.className='tag '+(t.tagClass||'');
+    tagSpan.textContent=t.tag;
+    if(t.tagColor&&!t.tagClass) tagSpan.style.cssText=`background:${t.tagColor}22;color:${t.tagColor};border:0.5px solid ${t.tagColor}44`;
+    row.appendChild(checkDiv); row.appendChild(textDiv); row.appendChild(tagSpan);
+    if(t.pri){ const d=document.createElement('div'); d.className='pdot '+(PRI_CLASSES[t.pri]||'pm'); row.appendChild(d); }
+    if(t.due){ const s=document.createElement('span'); s.style.cssText='font-size:10px;color:var(--text-tertiary);white-space:nowrap'; s.textContent=new Date(t.due).toLocaleDateString('en-US',{month:'short',day:'numeric'}); row.appendChild(s); }
+    if(t.onDelete){ const del=document.createElement('button'); del.className='del-btn'; del.innerHTML='&#215;'; del.onclick=t.onDelete; row.appendChild(del); }
     list.appendChild(row);
   });
-  document.getElementById('st-total').textContent=tasks.length;
+  document.getElementById('st-total').textContent=all.length;
   document.getElementById('st-open').textContent=open.length;
   document.getElementById('st-done').textContent=done.length;
   buildTodayTimeline();
@@ -860,15 +962,87 @@ function renderProjects(){
     totalT+=proj.tasks.length; doneT+=proj.tasks.filter(t=>t.done).length;
     const p=pct(proj);
     const card=document.createElement('div'); card.className='project-card';
-    const tasksHtml=proj.tasks.map(t=>`<div class="pt-row" onclick="togglePT(${proj.id},${t.id})"><div class="pt-check${t.done?' done':''}"></div><div class="pt-text${t.done?' done':''}">${esc(t.text)}</div><button class="pt-del" onclick="event.stopPropagation();deletePT(${proj.id},${t.id})">&#215;</button></div>`).join('');
-    card.innerHTML=`<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);flex-shrink:0"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div><div class="proj-tasks${proj.expanded?' open':''}">${tasksHtml}<div class="add-pt"><input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button></div></div>`;
+    const taskContainer = document.createElement('div');
+    taskContainer.className = 'proj-tasks' + (proj.expanded ? ' open' : '');
+
+    proj.tasks.forEach((t, idx) => {
+      const ptRow = document.createElement('div');
+      ptRow.className = 'pt-row';
+      ptRow.draggable = true;
+      ptRow.dataset.projId = proj.id;
+      ptRow.dataset.taskIdx = idx;
+
+      // Drag handle
+      const handle = document.createElement('div');
+      handle.className = 'pt-drag';
+      handle.innerHTML = '<span></span><span></span><span></span>';
+      handle.title = 'Drag to reorder';
+
+      // Prevent drag from firing the toggle click
+      handle.addEventListener('mousedown', e => e.stopPropagation());
+
+      const chk = document.createElement('div');
+      chk.className = 'pt-check' + (t.done ? ' done' : '');
+      chk.onclick = e => { e.stopPropagation(); togglePT(proj.id, t.id); };
+
+      const txt = document.createElement('div');
+      txt.className = 'pt-text' + (t.done ? ' done' : '');
+      txt.textContent = t.text;
+
+      const del = document.createElement('button');
+      del.className = 'pt-del';
+      del.innerHTML = '&#215;';
+      del.onclick = e => { e.stopPropagation(); deletePT(proj.id, t.id); };
+
+      ptRow.appendChild(handle);
+      ptRow.appendChild(chk);
+      ptRow.appendChild(txt);
+      ptRow.appendChild(del);
+
+      // Drag events
+      ptRow.addEventListener('dragstart', e => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({projId: proj.id, fromIdx: idx}));
+        setTimeout(() => ptRow.classList.add('dragging'), 0);
+      });
+      ptRow.addEventListener('dragend', () => ptRow.classList.remove('dragging'));
+      ptRow.addEventListener('dragover', e => { e.preventDefault(); ptRow.classList.add('drag-over'); });
+      ptRow.addEventListener('dragleave', () => ptRow.classList.remove('drag-over'));
+      ptRow.addEventListener('drop', e => {
+        e.preventDefault();
+        ptRow.classList.remove('drag-over');
+        try {
+          const {projId, fromIdx} = JSON.parse(e.dataTransfer.getData('text/plain'));
+          if(projId === proj.id && fromIdx !== idx) movePT(proj.id, fromIdx, idx);
+        } catch(_){}
+      });
+
+      taskContainer.appendChild(ptRow);
+    });
+
+    // Add task input
+    const addPtDiv = document.createElement('div');
+    addPtDiv.className = 'add-pt';
+    addPtDiv.innerHTML = `<input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button>`;
+    taskContainer.appendChild(addPtDiv);
+
+    card.innerHTML = `<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);flex-shrink:0"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div>`;
+    card.appendChild(taskContainer);
     list.appendChild(card);
   });
   document.getElementById('sp-total').textContent=projects.length;
   document.getElementById('sp-tasks').textContent=totalT;
   document.getElementById('sp-pct').textContent=totalT?Math.round(doneT/totalT*100)+'%':'0%';
 }
-function toggleExpand(id){ const p=projects.find(p=>p.id===id); if(p){p.expanded=!p.expanded;renderProjects();saveData();} }
+function movePT(pid, fromIdx, toIdx){
+  const p=projects.find(p=>p.id===pid);
+  if(!p) return;
+  const tasks=p.tasks;
+  const [moved]=tasks.splice(fromIdx,1);
+  tasks.splice(toIdx,0,moved);
+  renderProjects();
+  saveData();
+}
 function togglePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(!p)return; const t=p.tasks.find(t=>t.id===tid); if(t){t.done=!t.done;renderProjects();saveData();} }
 function deletePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();} }
 function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():''; if(!text)return; const p=projects.find(p=>p.id===pid); if(p){p.tasks.push({id:nextPtId++,text,done:false});renderProjects();saveData();} }
@@ -904,6 +1078,7 @@ function initGoogleAuth(){
       document.getElementById('gcal-signout-btn').style.display='';
       updateCalBadge('syncing');
       await fetchCalendarEvents();
+      await fetchGoogleTasks();
     }
   });
 }
@@ -915,7 +1090,7 @@ function gcalSignIn(){
 
 function gcalSignOut(){
   if(gcalToken) google.accounts.oauth2.revoke(gcalToken,()=>{});
-  gcalToken=null; calEvents=[];
+  gcalToken=null; calEvents=[]; googleTasks=[];
   document.getElementById('gcal-signin-btn').style.display='';
   document.getElementById('gcal-signout-btn').style.display='none';
   updateCalBadge('signed-out');
