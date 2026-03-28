@@ -142,12 +142,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
 .proj-tasks.open{display:flex}
 .pt-row{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--bg-secondary);border-radius:var(--radius-md)}
-.pt-row.dragging{opacity:.4}
-.pt-row.drag-over{border-top:2px solid var(--blue-border)}
-.pt-drag{display:flex;flex-direction:column;gap:2px;padding:2px 2px;cursor:grab;opacity:0;transition:opacity .1s;flex-shrink:0}
-.pt-drag span{display:block;width:10px;height:1.5px;background:var(--text-tertiary);border-radius:1px}
-.pt-row:hover .pt-drag{opacity:1}
-.pt-drag:active{cursor:grabbing}
 .pt-check{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--border-mid);flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .pt-check.done{background:#639922;border-color:#639922}
 .pt-check.done::after{content:'';display:block;width:3px;height:5px;border:1.5px solid white;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
@@ -1111,14 +1105,19 @@ function buildProjectCard(proj){
   const taskContainer=document.createElement('div');
   taskContainer.className='proj-tasks'+(proj.expanded?' open':'');
 
-  proj.tasks.forEach((t)=>{
-    const ptRow=document.createElement('div');
-    ptRow.className='pt-row'; ptRow.draggable=false;
-    ptRow.dataset.taskId=t.id;
+  // Sort tasks: open first by due date asc (no due date last), then done tasks
+  const sortedTasks=[...proj.tasks].sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    if(!a.due&&!b.due) return 0;
+    if(!a.due) return 1;
+    if(!b.due) return -1;
+    return a.due<b.due?-1:a.due>b.due?1:0;
+  });
 
-    const handle=document.createElement('div'); handle.className='pt-drag';
-    handle.innerHTML='<span></span><span></span><span></span>';
-    handle.addEventListener('mousedown',e=>{ e.stopPropagation(); ptRow.draggable=true; });
+  sortedTasks.forEach((t)=>{
+    const ptRow=document.createElement('div');
+    ptRow.className='pt-row';
+    ptRow.dataset.taskId=t.id;
 
     const chk=document.createElement('div'); chk.className='pt-check'+(t.done?' done':'');
     chk.onclick=e=>{ e.stopPropagation(); togglePT(proj.id,t.id); };
@@ -1137,25 +1136,7 @@ function buildProjectCard(proj){
     taskDue.onclick=e=>e.stopPropagation();
     taskDue.onchange=e=>{ e.stopPropagation(); updateTaskDue(proj.id,t.id,e.target.value); };
 
-    ptRow.appendChild(handle); ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(taskDue); ptRow.appendChild(del);
-
-    ptRow.addEventListener('dragstart',e=>{
-      e.dataTransfer.effectAllowed='move';
-      e.dataTransfer.setData('text/plain',JSON.stringify({type:'task',projId:proj.id,taskId:t.id}));
-      setTimeout(()=>ptRow.classList.add('dragging'),0);
-    });
-    ptRow.addEventListener('dragend',()=>{ ptRow.draggable=false; ptRow.classList.remove('dragging'); });
-    ptRow.addEventListener('dragover',e=>{ e.preventDefault(); ptRow.classList.add('drag-over'); });
-    ptRow.addEventListener('dragleave',e=>{ if(!ptRow.contains(e.relatedTarget)) ptRow.classList.remove('drag-over'); });
-    ptRow.addEventListener('drop',e=>{
-      e.preventDefault(); ptRow.classList.remove('drag-over');
-      try{
-        const data=JSON.parse(e.dataTransfer.getData('text/plain'));
-        if(data.type==='task' && data.projId===proj.id && data.taskId!==t.id){
-          movePT(proj.id, data.taskId, t.id);
-        }
-      }catch(_){}
-    });
+    ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(taskDue); ptRow.appendChild(del);
     taskContainer.appendChild(ptRow);
   });
 
@@ -1293,17 +1274,6 @@ function moveProject(fromId, toId){
   renderProjects(); saveData();
 }
 
-function movePT(pid, fromTaskId, toTaskId){
-  const p=projects.find(p=>p.id===pid); if(!p) return;
-  const fromIdx=p.tasks.findIndex(t=>t.id===fromTaskId);
-  const toIdx=p.tasks.findIndex(t=>t.id===toTaskId);
-  if(fromIdx<0||toIdx<0||fromIdx===toIdx) return;
-  const [moved]=p.tasks.splice(fromIdx,1);
-  // Recalculate toIdx after splice since array shifted
-  const newToIdx=p.tasks.findIndex(t=>t.id===toTaskId);
-  p.tasks.splice(newToIdx,0,moved);
-  renderProjects(); saveData();
-}
 
 function togglePT(pid,tid){
   const p=projects.find(p=>p.id===pid); if(!p) return;
