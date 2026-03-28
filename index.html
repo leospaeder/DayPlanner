@@ -118,7 +118,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .proj-del-btn{width:18px;height:18px;border-radius:50%;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;font-size:14px;opacity:0;transition:opacity .1s;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:2px}
 .project-card:hover .proj-del-btn{opacity:1}
 .proj-del-btn:hover{color:var(--red);background:var(--red-bg)}
-.proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 5px}
+.proj-status-btn{font-size:10px;padding:2px 7px;border-radius:8px;border:0.5px solid var(--border-light);background:transparent;cursor:pointer;white-space:nowrap;color:var(--text-secondary)}
+.proj-status-btn:hover{background:var(--bg-secondary)}
+.status-active{background:var(--success-bg);color:var(--success-text);border-color:var(--green-border)}
+.status-inactive{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}
+.status-archived{background:var(--bg-secondary);color:var(--text-tertiary);border-color:var(--border-mid)}
+.proj-section-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;margin:12px 0 6px;padding-bottom:4px;border-bottom:0.5px solid var(--border-light)}
 .progress-track{height:5px;background:var(--bg-secondary);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
@@ -351,12 +356,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div id="view-projects" class="view">
     <div class="scroll-content">
       <div class="stats-row">
-        <div class="stat-card"><div class="stat-val" id="sp-total">0</div><div class="stat-lbl">Projects</div></div>
-        <div class="stat-card"><div class="stat-val" id="sp-tasks">0</div><div class="stat-lbl">Total tasks</div></div>
-        <div class="stat-card"><div class="stat-val" id="sp-pct">0%</div><div class="stat-lbl">Overall done</div></div>
+        <div class="stat-card"><div class="stat-val" id="sp-total">0</div><div class="stat-lbl">Active</div></div>
+        <div class="stat-card"><div class="stat-val" id="sp-tasks">0</div><div class="stat-lbl">Open tasks</div></div>
+        <div class="stat-card"><div class="stat-val" id="sp-pct">0%</div><div class="stat-lbl">Done</div></div>
       </div>
       <div>
-        <div class="sec-label">Active projects</div>
         <div class="new-proj-form" id="new-proj-form">
           <div style="font-size:13px;font-weight:500">New project</div>
           <div class="nf-row">
@@ -957,91 +961,143 @@ function addTask(){
 function renderProjects(){
   const list=document.getElementById('proj-list');
   list.innerHTML='';
-  let totalT=0,doneT=0;
-  projects.forEach(proj=>{
-    totalT+=proj.tasks.length; doneT+=proj.tasks.filter(t=>t.done).length;
-    const p=pct(proj);
-    const card=document.createElement('div'); card.className='project-card';
-    const taskContainer = document.createElement('div');
-    taskContainer.className = 'proj-tasks' + (proj.expanded ? ' open' : '');
 
-    proj.tasks.forEach((t, idx) => {
-      const ptRow = document.createElement('div');
-      ptRow.className = 'pt-row';
-      ptRow.draggable = true;
-      ptRow.dataset.projId = proj.id;
-      ptRow.dataset.taskIdx = idx;
+  const active=projects.filter(p=>!p.status||p.status==='active');
+  const inactive=projects.filter(p=>p.status==='inactive');
+  const archived=projects.filter(p=>p.status==='archived');
 
-      // Drag handle
-      const handle = document.createElement('div');
-      handle.className = 'pt-drag';
-      handle.innerHTML = '<span></span><span></span><span></span>';
-      handle.title = 'Drag to reorder';
-
-      // Prevent drag from firing the toggle click
-      handle.addEventListener('mousedown', e => e.stopPropagation());
-
-      const chk = document.createElement('div');
-      chk.className = 'pt-check' + (t.done ? ' done' : '');
-      chk.onclick = e => { e.stopPropagation(); togglePT(proj.id, t.id); };
-
-      const txt = document.createElement('div');
-      txt.className = 'pt-text' + (t.done ? ' done' : '');
-      txt.textContent = t.text;
-
-      const del = document.createElement('button');
-      del.className = 'pt-del';
-      del.innerHTML = '&#215;';
-      del.onclick = e => { e.stopPropagation(); deletePT(proj.id, t.id); };
-
-      ptRow.appendChild(handle);
-      ptRow.appendChild(chk);
-      ptRow.appendChild(txt);
-      ptRow.appendChild(del);
-
-      // Drag events
-      ptRow.addEventListener('dragstart', e => {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', JSON.stringify({projId: proj.id, fromIdx: idx}));
-        setTimeout(() => ptRow.classList.add('dragging'), 0);
-      });
-      ptRow.addEventListener('dragend', () => ptRow.classList.remove('dragging'));
-      ptRow.addEventListener('dragover', e => { e.preventDefault(); ptRow.classList.add('drag-over'); });
-      ptRow.addEventListener('dragleave', () => ptRow.classList.remove('drag-over'));
-      ptRow.addEventListener('drop', e => {
-        e.preventDefault();
-        ptRow.classList.remove('drag-over');
-        try {
-          const {projId, fromIdx} = JSON.parse(e.dataTransfer.getData('text/plain'));
-          if(projId === proj.id && fromIdx !== idx) movePT(proj.id, fromIdx, idx);
-        } catch(_){}
-      });
-
-      taskContainer.appendChild(ptRow);
-    });
-
-    // Add task input
-    const addPtDiv = document.createElement('div');
-    addPtDiv.className = 'add-pt';
-    addPtDiv.innerHTML = `<input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button>`;
-    taskContainer.appendChild(addPtDiv);
-
-    card.innerHTML = `<div class="proj-header" onclick="toggleExpand(${proj.id})"><div class="proj-color" style="background:${proj.color}"></div><div class="proj-name">${esc(proj.name)}</div><div class="proj-pct">${p}%</div><svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);flex-shrink:0"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><button class="proj-del-btn" onclick="event.stopPropagation();deleteProject(${proj.id})">&#215;</button></div><div class="proj-meta">${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done</div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${proj.color}"></div></div>`;
-    card.appendChild(taskContainer);
-    list.appendChild(card);
-  });
-  document.getElementById('sp-total').textContent=projects.length;
+  // Stats — active only
+  let totalT=0, doneT=0;
+  active.forEach(p=>{ totalT+=p.tasks.filter(t=>!t.done).length; doneT+=p.tasks.filter(t=>t.done).length; });
+  document.getElementById('sp-total').textContent=active.length;
   document.getElementById('sp-tasks').textContent=totalT;
-  document.getElementById('sp-pct').textContent=totalT?Math.round(doneT/totalT*100)+'%':'0%';
+  const allT=active.reduce((n,p)=>n+p.tasks.length,0);
+  document.getElementById('sp-pct').textContent=allT?Math.round(doneT/allT*100)+'%':'0%';
+
+  function renderGroup(group, label){
+    if(!group.length) return;
+    const sec=document.createElement('div'); sec.className='proj-section-label'; sec.textContent=label;
+    list.appendChild(sec);
+    group.forEach(proj=>{ list.appendChild(buildProjectCard(proj)); });
+  }
+
+  renderGroup(active,'Active');
+  renderGroup(inactive,'Inactive');
+  renderGroup(archived,'Archived / Completed');
 }
-function movePT(pid, fromIdx, toIdx){
-  const p=projects.find(p=>p.id===pid);
+
+function buildProjectCard(proj){
+  const p=pct(proj);
+  const card=document.createElement('div'); card.className='project-card'; card.style.marginBottom='10px';
+  if(proj.status==='archived') card.style.opacity='0.6';
+
+  // Header
+  const header=document.createElement('div'); header.className='proj-header';
+  header.style.cursor='pointer';
+  header.onclick=()=>toggleExpand(proj.id);
+
+  const colorDot=document.createElement('div'); colorDot.className='proj-color'; colorDot.style.background=proj.color;
+  const nameDiv=document.createElement('div'); nameDiv.className='proj-name'; nameDiv.textContent=proj.name;
+  const pctDiv=document.createElement('div'); pctDiv.className='proj-pct'; pctDiv.textContent=p+'%';
+
+  // Chevron
+  const chev=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  chev.setAttribute('width','11'); chev.setAttribute('height','11'); chev.setAttribute('viewBox','0 0 12 12'); chev.setAttribute('fill','none');
+  chev.style.cssText=`color:var(--text-tertiary);transform:rotate(${proj.expanded?180:0}deg);transition:transform .2s;flex-shrink:0`;
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M2 4l4 4 4-4'); path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','1.5'); path.setAttribute('stroke-linecap','round');
+  chev.appendChild(path);
+
+  // Status button
+  const statusBtn=document.createElement('button'); statusBtn.className='proj-status-btn';
+  const status=proj.status||'active';
+  statusBtn.textContent=status==='active'?'Active':status==='inactive'?'Inactive':'Archived';
+  statusBtn.className='proj-status-btn status-'+status;
+  statusBtn.onclick=e=>{ e.stopPropagation(); cycleStatus(proj.id); };
+
+  // Delete button
+  const delBtn=document.createElement('button'); delBtn.className='proj-del-btn'; delBtn.innerHTML='&#215;';
+  delBtn.onclick=e=>{ e.stopPropagation(); deleteProject(proj.id); };
+
+  header.appendChild(colorDot); header.appendChild(nameDiv); header.appendChild(pctDiv);
+  header.appendChild(chev); header.appendChild(statusBtn); header.appendChild(delBtn);
+  card.appendChild(header);
+
+  // Meta + progress
+  const meta=document.createElement('div'); meta.className='proj-meta';
+  meta.textContent=`${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done`;
+  card.appendChild(meta);
+
+  const track=document.createElement('div'); track.className='progress-track';
+  const fill=document.createElement('div'); fill.className='progress-fill';
+  fill.style.cssText=`width:${p}%;background:${proj.color}`;
+  track.appendChild(fill); card.appendChild(track);
+
+  // Task container
+  const taskContainer=document.createElement('div');
+  taskContainer.className='proj-tasks'+(proj.expanded?' open':'');
+
+  proj.tasks.forEach((t,idx)=>{
+    const ptRow=document.createElement('div');
+    ptRow.className='pt-row'; ptRow.draggable=true;
+    ptRow.dataset.projId=proj.id; ptRow.dataset.taskIdx=idx;
+
+    const handle=document.createElement('div'); handle.className='pt-drag';
+    handle.innerHTML='<span></span><span></span><span></span>';
+    handle.addEventListener('mousedown',e=>e.stopPropagation());
+
+    const chk=document.createElement('div'); chk.className='pt-check'+(t.done?' done':'');
+    chk.onclick=e=>{ e.stopPropagation(); togglePT(proj.id,t.id); };
+
+    const txt=document.createElement('div'); txt.className='pt-text'+(t.done?' done':'');
+    txt.textContent=t.text;
+
+    const del=document.createElement('button'); del.className='pt-del'; del.innerHTML='&#215;';
+    del.onclick=e=>{ e.stopPropagation(); deletePT(proj.id,t.id); };
+
+    ptRow.appendChild(handle); ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(del);
+
+    ptRow.addEventListener('dragstart',e=>{
+      e.dataTransfer.effectAllowed='move';
+      e.dataTransfer.setData('text/plain',JSON.stringify({projId:proj.id,fromIdx:idx}));
+      setTimeout(()=>ptRow.classList.add('dragging'),0);
+    });
+    ptRow.addEventListener('dragend',()=>ptRow.classList.remove('dragging'));
+    ptRow.addEventListener('dragover',e=>{ e.preventDefault(); ptRow.classList.add('drag-over'); });
+    ptRow.addEventListener('dragleave',()=>ptRow.classList.remove('drag-over'));
+    ptRow.addEventListener('drop',e=>{
+      e.preventDefault(); ptRow.classList.remove('drag-over');
+      try{ const {projId,fromIdx}=JSON.parse(e.dataTransfer.getData('text/plain'));
+        if(projId===proj.id&&fromIdx!==idx) movePT(proj.id,fromIdx,idx); }catch(_){}
+    });
+    taskContainer.appendChild(ptRow);
+  });
+
+  const addPtDiv=document.createElement('div'); addPtDiv.className='add-pt';
+  addPtDiv.innerHTML=`<input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button>`;
+  taskContainer.appendChild(addPtDiv);
+  card.appendChild(taskContainer);
+
+  return card;
+}
+
+function toggleExpand(id){
+  const p=projects.find(p=>p.id===id);
+  if(p){ p.expanded=!p.expanded; renderProjects(); saveData(); }
+}
+
+function cycleStatus(id){
+  const p=projects.find(p=>p.id===id);
   if(!p) return;
-  const tasks=p.tasks;
-  const [moved]=tasks.splice(fromIdx,1);
-  tasks.splice(toIdx,0,moved);
-  renderProjects();
-  saveData();
+  const cycle={active:'inactive',inactive:'archived',archived:'active'};
+  p.status=cycle[p.status||'active']||'active';
+  renderProjects(); saveData();
+}
+
+function movePT(pid,fromIdx,toIdx){
+  const p=projects.find(p=>p.id===pid); if(!p) return;
+  const [moved]=p.tasks.splice(fromIdx,1); p.tasks.splice(toIdx,0,moved);
+  renderProjects(); saveData();
 }
 function togglePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(!p)return; const t=p.tasks.find(t=>t.id===tid); if(t){t.done=!t.done;renderProjects();saveData();} }
 function deletePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();} }
@@ -1049,7 +1105,7 @@ function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const tex
 function deleteProject(id){ if(!confirm('Delete this project and all its tasks?'))return; projects=projects.filter(p=>p.id!==id);renderProjects();saveData(); }
 function showNewProjForm(){ document.getElementById('new-proj-form').classList.add('open'); document.getElementById('nf-name').focus(); }
 function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; }
-function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; projects.unshift({id:nextProjId++,name,color,expanded:true,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
+function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; projects.unshift({id:nextProjId++,name,color,status:'active',expanded:true,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
 
 // ─── Google Calendar OAuth ────────────────────────────────────────────────────
 function updateCalBadge(state){
