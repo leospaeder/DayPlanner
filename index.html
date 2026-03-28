@@ -273,6 +273,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   <!-- ── WEEK VIEW ── -->
   <div id="view-week" class="view">
+    <!-- Week nav bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-primary);border-bottom:0.5px solid var(--border-light);flex-shrink:0">
+      <div style="display:flex;gap:6px">
+        <button onclick="changeWeek(-1)" class="btn" style="padding:4px 10px;font-size:12px">&#8592; Prev</button>
+        <button onclick="changeWeek(0)" class="btn" style="padding:4px 10px;font-size:12px">Today</button>
+        <button onclick="changeWeek(1)" class="btn" style="padding:4px 10px;font-size:12px">Next &#8594;</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-tertiary)" id="week-range-label"></div>
+    </div>
     <!-- Weather banner always shown -->
     <div class="week-weather" id="week-weather">
       <div class="week-weather-label">5-day forecast &amp; what to wear</div>
@@ -290,15 +299,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="wh-day"><div class="wh-name" id="wh4n">Fri</div><div id="wh4d" class="wh-num">—</div></div>
     </div>
     <!-- Calendar grid or sign-in prompt -->
-    <div id="week-cal-area" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">
       <div id="week-no-cal" class="week-no-cal">Sign in to Google Calendar to see your events.</div>
-      <div id="week-grid-scroll" class="week-grid-scroll" style="display:none">
+      <div id="week-grid-scroll" style="display:none;flex:1;overflow-y:auto">
         <div class="week-grid" id="week-grid"></div>
       </div>
     </div>
     <div class="week-legend">
       <div class="leg"><div class="leg-dot" style="background:var(--blue-bg);border-left:2px solid var(--blue-border)"></div>Google Calendar</div>
-      <div class="leg"><div class="leg-dot" style="background:var(--amber-bg);border-left:2px solid var(--amber-border)"></div>Tasks due</div>
     </div>
   </div>
 
@@ -413,6 +421,7 @@ let gcalToken = null;
 let calEvents = [];
 let tokenClient = null;
 let currentView = 'today';
+let weekOffset = 0; // 0 = current week, -1 = last week, +1 = next week
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -433,6 +442,17 @@ function getMondayOf(date){
   const d=new Date(date); d.setHours(0,0,0,0);
   d.setDate(d.getDate()-((d.getDay()+6)%7));
   return d;
+}
+function getMondayForView(){
+  const mon=getMondayOf(new Date());
+  mon.setDate(mon.getDate()+(weekOffset*7));
+  return mon;
+}
+function changeWeek(dir){
+  if(dir===0) weekOffset=0;
+  else weekOffset+=dir;
+  buildWeekView();
+  if(gcalToken) fetchCalendarEventsForWeek();
 }
 function sameDay(a,b){ return a.toDateString()===b.toDateString(); }
 function eventsForDay(date){
@@ -556,15 +576,22 @@ function buildTodayTimeline(){
 
 // ─── Week view ────────────────────────────────────────────────────────────────
 function buildWeekView(){
-  buildWeekWeather();
   buildWeekDates();
+  buildWeekWeather();
   if(gcalToken){ showWeekGrid(); buildWeekGrid(); }
   else { showWeekNoCal(); }
 }
 
 function buildWeekDates(){
-  const now=new Date(), mon=getMondayOf(now);
+  const now=new Date(), mon=getMondayForView();
+  const fri=new Date(mon); fri.setDate(mon.getDate()+4);
   const dayShort=['Mon','Tue','Wed','Thu','Fri'];
+  // Update range label and topbar
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const label=`${months[mon.getMonth()]} ${mon.getDate()} – ${months[fri.getMonth()]} ${fri.getDate()}, ${fri.getFullYear()}`;
+  const rangeEl=document.getElementById('week-range-label');
+  if(rangeEl) rangeEl.textContent=label;
+  document.getElementById('topbar-title').textContent=`Week of ${label}`;
   for(let i=0;i<5;i++){
     const d=new Date(mon); d.setDate(mon.getDate()+i);
     const isToday=sameDay(d,now);
@@ -577,7 +604,8 @@ function buildWeekDates(){
 
 function showWeekGrid(){
   document.getElementById('week-no-cal').style.display='none';
-  document.getElementById('week-grid-scroll').style.display='block';
+  document.getElementById('week-grid-scroll').style.display='flex';
+  document.getElementById('week-grid-scroll').style.flexDirection='column';
 }
 function showWeekNoCal(){
   document.getElementById('week-no-cal').style.display='flex';
@@ -588,26 +616,30 @@ function buildWeekGrid(){
   const grid=document.getElementById('week-grid');
   if(!grid) return;
   grid.innerHTML='';
-  const now=new Date(), mon=getMondayOf(now);
+  const now=new Date(), mon=getMondayForView();
   const nowH=now.getHours(), nowM=now.getMinutes();
 
   WEEK_HOURS.forEach(hr=>{
-    const lbl=document.createElement('div'); lbl.className='wg-label'; lbl.textContent=hr.l;
+    // Time label
+    const lbl=document.createElement('div');
+    lbl.className='wg-label';
+    lbl.textContent=hr.l;
     grid.appendChild(lbl);
+    // 5 day columns
     for(let d=0;d<5;d++){
       const dayDate=new Date(mon); dayDate.setDate(mon.getDate()+d);
       const cell=document.createElement('div'); cell.className='wg-cell';
-      // Draw now-line
-      if(hr.h===nowH && sameDay(dayDate,now)){
+      // Now line
+      if(hr.h===nowH && sameDay(dayDate,now) && weekOffset===0){
         const line=document.createElement('div'); line.className='now-line-week';
         line.style.top=Math.round(nowM/60*52)+'px';
         cell.appendChild(line);
       }
-      const evs=eventsForDay(dayDate).filter(e=>{
+      // Events
+      eventsForDay(dayDate).filter(e=>{
         if(!e.start.dateTime) return false;
         return new Date(e.start.dateTime).getHours()===hr.h;
-      });
-      evs.forEach(e=>{
+      }).forEach(e=>{
         const div=document.createElement('div'); div.className='wg-ev';
         div.innerHTML=`<div class="wg-ev-t">${esc(e.summary||'(no title)')}</div><div class="wg-ev-m">${fmtRange(e)}</div>`;
         cell.appendChild(div);
@@ -615,6 +647,11 @@ function buildWeekGrid(){
       grid.appendChild(cell);
     }
   });
+  // Scroll to current hour
+  if(weekOffset===0){
+    const scrollEl=document.getElementById('week-grid-scroll');
+    if(scrollEl){ const px=Math.max(0,(nowH-7)*52-60); setTimeout(()=>{ scrollEl.scrollTop=px; },50); }
+  }
 }
 
 // ─── Week weather banner ──────────────────────────────────────────────────────
@@ -632,32 +669,34 @@ function buildWeekWeather(){
   const pops=weatherData.daily.precipitation_probability_max||[];
   const dates=weatherData.daily.time;
   const now=new Date();
-
+  const mon=getMondayForView();
   cards.innerHTML='';
-  const count=Math.min(5,highs.length);
-  for(let i=0;i<count;i++){
-    const dt=new Date(dates[i]+'T12:00:00');
-    const isToday=sameDay(dt,now);
-    const hi=Math.round(highs[i]);
-    const icon=iconMap[codes[i]]||'🌡';
-    const cond=condMap[codes[i]]||'';
-    const pop=pops[i]?Math.round(pops[i])+'% rain':'No rain';
-
-    // Color by temp
+  // One card per weekday column — match by date string so weather always aligns with calendar
+  for(let col=0;col<5;col++){
+    const colDate=new Date(mon); colDate.setDate(mon.getDate()+col);
+    const colStr=colDate.toISOString().split('T')[0];
+    const isToday=sameDay(colDate,now);
+    const wi=dates.findIndex(d=>d===colStr);
+    if(wi<0){
+      const card=document.createElement('div'); card.className='ww-card'; card.style.background='var(--bg-secondary)';
+      card.innerHTML=`<div class="ww-day" style="color:var(--text-tertiary)">${DAY_NAMES[colDate.getDay()]}</div><div style="font-size:11px;color:var(--text-tertiary);margin-top:6px">No forecast</div>`;
+      cards.appendChild(card); continue;
+    }
+    const hi=Math.round(highs[wi]);
+    const icon=iconMap[codes[wi]]||'🌡';
+    const cond=condMap[codes[wi]]||'';
+    const pop=pops[wi]?Math.round(pops[wi])+'% rain':'No rain';
     let bg,tc,border;
     if(hi>=85){bg='#FCEBEB';tc='#791F1F';border='#E24B4A';}
     else if(hi>=75){bg='#FAEEDA';tc='#633806';border='#EF9F27';}
     else if(hi>=65){bg='#E6F1FB';tc='#0C447C';border='#378ADD';}
     else if(hi>=55){bg='#EAF3DE';tc='#27500A';border='#639922';}
     else{bg='#EEEDFE';tc='#3C3489';border='#534AB7';}
-
     const outfit=hi>=85?'Very hot — shorts & tee':hi>=75?'Warm — short sleeves':hi>=65?'T-shirt + light layer':hi>=55?'Light jacket':'Jacket — cooler day';
-
-    const card=document.createElement('div');
-    card.className='ww-card';
+    const card=document.createElement('div'); card.className='ww-card';
     card.style.cssText=`background:${bg};${isToday?'outline:2px solid '+border+';outline-offset:-2px':''}`;
     card.innerHTML=`
-      <div class="ww-row"><span class="ww-day" style="color:${tc}">${isToday?'Today':DAY_NAMES[dt.getDay()]}</span><span class="ww-icon">${icon}</span></div>
+      <div class="ww-row"><span class="ww-day" style="color:${tc}">${isToday?'Today':DAY_NAMES[colDate.getDay()]}</span><span class="ww-icon">${icon}</span></div>
       <div class="ww-hi" style="color:${tc}">${hi}°F</div>
       <div class="ww-cond" style="color:${border}">${cond} · ${pop}</div>
       <div class="ww-outfit" style="color:${tc};border-top-color:${border}33">${outfit}</div>
@@ -762,6 +801,21 @@ function gcalSignOut(){
   if(currentView==='week') showWeekNoCal();
 }
 
+async function fetchCalendarEventsForWeek(){
+  if(!gcalToken) return;
+  try{
+    const mon=getMondayForView();
+    const end=new Date(mon); end.setDate(mon.getDate()+7);
+    const url=`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${mon.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=200`;
+    const res=await fetch(url,{headers:{Authorization:`Bearer ${gcalToken}`}});
+    if(res.status===401){ gcalSignOut(); return; }
+    if(!res.ok) return;
+    const data=await res.json();
+    calEvents=(data.items||[]).filter(e=>e.start&&(e.start.dateTime||e.start.date));
+    buildWeekGrid();
+  }catch(e){ console.error('Week fetch error:',e); }
+}
+
 async function fetchCalendarEvents(){
   if(!gcalToken) return;
   try{
@@ -786,7 +840,7 @@ async function fetchCalendarEvents(){
 async function fetchWeatherForCoords(lat,lon,locationName){
   try{
     const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Los_Angeles';
-    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,precipitation_probability_max,weathercode&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&forecast_days=5`);
+    const res=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,precipitation_probability_max,weathercode&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&forecast_days=14`);
     const d=await res.json();
     weatherData=d;
     const condMap={0:'Clear',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',61:'Light rain',63:'Rain',71:'Light snow',80:'Showers',95:'Thunderstorm'};
