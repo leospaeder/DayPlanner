@@ -124,6 +124,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .status-inactive{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}
 .status-archived{background:var(--bg-secondary);color:var(--text-tertiary);border-color:var(--border-mid)}
 .proj-section-label{font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.6px;margin:12px 0 6px;padding-bottom:4px;border-bottom:0.5px solid var(--border-light)}
+.proj-meta{font-size:11px;color:var(--text-tertiary);margin:7px 0 3px}
+.proj-due-row{font-size:11px;color:var(--text-tertiary);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.proj-due-input{border:none;background:transparent;font-size:11px;color:var(--text-tertiary);cursor:pointer;padding:0;font-family:inherit;outline:none;width:130px}
+.proj-due-input:hover{color:var(--text-secondary)}
+.proj-due-input:focus{color:var(--text-primary)}
+.pt-due{font-size:10px;color:var(--text-tertiary);white-space:nowrap;cursor:pointer;padding:1px 5px;border-radius:6px;border:0.5px solid var(--border-light);background:transparent;font-family:inherit;outline:none}
+.pt-due:hover{background:var(--bg-primary)}
+.pt-due.overdue{color:#791F1F;background:#FCEBEB;border-color:#E24B4A}
 .progress-track{height:5px;background:var(--bg-secondary);border-radius:3px;overflow:hidden}
 .progress-fill{height:100%;border-radius:3px;transition:width .4s}
 .proj-tasks{display:none;flex-direction:column;gap:4px;margin-top:10px}
@@ -366,6 +374,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="nf-row">
             <input class="nf-input" id="nf-name" placeholder="Project name..." style="flex:2">
             <select class="nf-select" id="nf-color"><option value="#378ADD">Blue</option><option value="#534AB7">Purple</option><option value="#639922">Green</option><option value="#EF9F27">Amber</option><option value="#D85A30">Coral</option><option value="#1D9E75">Teal</option></select>
+          </div>
+          <div class="nf-row" style="align-items:center">
+            <label style="font-size:11px;color:var(--text-tertiary);flex-shrink:0;width:60px">Due date</label>
+            <input type="date" class="nf-input" id="nf-due" style="flex:1">
           </div>
           <div class="nf-actions">
             <button class="nf-cancel" onclick="hideNewProjForm()">Cancel</button>
@@ -986,6 +998,21 @@ function renderProjects(){
   renderGroup(archived,'Archived / Completed');
 }
 
+function fmtDue(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr+'T12:00:00');
+  const today=new Date(); today.setHours(0,0,0,0);
+  const diff=Math.round((d-today)/(1000*60*60*24));
+  return {label:d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}), overdue:diff<0};
+}
+function updateProjectDue(id,val){
+  const p=projects.find(p=>p.id===id); if(p){p.due=val||null; saveData();}
+}
+function updateTaskDue(pid,tid,val){
+  const p=projects.find(p=>p.id===pid); if(!p) return;
+  const t=p.tasks.find(t=>t.id===tid); if(t){t.due=val||null; saveData();}
+}
+
 function buildProjectCard(proj){
   const p=pct(proj);
   const card=document.createElement('div'); card.className='project-card'; card.style.marginBottom='10px';
@@ -1028,6 +1055,17 @@ function buildProjectCard(proj){
   meta.textContent=`${proj.tasks.filter(t=>t.done).length}/${proj.tasks.length} tasks done`;
   card.appendChild(meta);
 
+  // Project due date row
+  const dueRow=document.createElement('div'); dueRow.className='proj-due-row';
+  const dueLbl=document.createElement('span'); dueLbl.textContent='Due:'; dueLbl.style.flexShrink='0';
+  const dueIn=document.createElement('input'); dueIn.type='date'; dueIn.className='proj-due-input';
+  if(proj.due) dueIn.value=proj.due;
+  const dueFmt=fmtDue(proj.due);
+  if(dueFmt){ dueIn.style.color=dueFmt.overdue?'#E24B4A':'var(--text-secondary)'; }
+  dueIn.onchange=e=>{ updateProjectDue(proj.id,e.target.value); };
+  dueRow.appendChild(dueLbl); dueRow.appendChild(dueIn);
+  card.appendChild(dueRow);
+
   const track=document.createElement('div'); track.className='progress-track';
   const fill=document.createElement('div'); fill.className='progress-fill';
   fill.style.cssText=`width:${p}%;background:${proj.color}`;
@@ -1055,7 +1093,16 @@ function buildProjectCard(proj){
     const del=document.createElement('button'); del.className='pt-del'; del.innerHTML='&#215;';
     del.onclick=e=>{ e.stopPropagation(); deletePT(proj.id,t.id); };
 
-    ptRow.appendChild(handle); ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(del);
+    // Task due date
+    const taskDue=document.createElement('input'); taskDue.type='date'; taskDue.className='pt-due';
+    if(t.due) taskDue.value=t.due;
+    const tf=fmtDue(t.due);
+    if(tf&&tf.overdue) taskDue.classList.add('overdue');
+    taskDue.title='Set due date';
+    taskDue.onclick=e=>e.stopPropagation();
+    taskDue.onchange=e=>{ e.stopPropagation(); updateTaskDue(proj.id,t.id,e.target.value); };
+
+    ptRow.appendChild(handle); ptRow.appendChild(chk); ptRow.appendChild(txt); ptRow.appendChild(taskDue); ptRow.appendChild(del);
 
     ptRow.addEventListener('dragstart',e=>{
       e.dataTransfer.effectAllowed='move';
@@ -1074,7 +1121,7 @@ function buildProjectCard(proj){
   });
 
   const addPtDiv=document.createElement('div'); addPtDiv.className='add-pt';
-  addPtDiv.innerHTML=`<input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button>`;
+  addPtDiv.innerHTML=`<input type="text" placeholder="Add a task..." id="pt-inp-${proj.id}" onkeydown="if(event.key==='Enter')addPT(${proj.id})"><input type="date" id="pt-due-${proj.id}" class="pt-due" style="opacity:.6;cursor:pointer"><button class="add-pt-btn" onclick="addPT(${proj.id})">Add</button>`;
   taskContainer.appendChild(addPtDiv);
   card.appendChild(taskContainer);
 
@@ -1101,11 +1148,11 @@ function movePT(pid,fromIdx,toIdx){
 }
 function togglePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(!p)return; const t=p.tasks.find(t=>t.id===tid); if(t){t.done=!t.done;renderProjects();saveData();} }
 function deletePT(pid,tid){ const p=projects.find(p=>p.id===pid); if(p){p.tasks=p.tasks.filter(t=>t.id!==tid);renderProjects();saveData();} }
-function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():''; if(!text)return; const p=projects.find(p=>p.id===pid); if(p){p.tasks.push({id:nextPtId++,text,done:false});renderProjects();saveData();} }
+function addPT(pid){ const inp=document.getElementById('pt-inp-'+pid); const text=inp?inp.value.trim():''; if(!text)return; const dueInp=document.getElementById('pt-due-'+pid); const due=dueInp?dueInp.value||null:null; const p=projects.find(p=>p.id===pid); if(p){p.tasks.push({id:nextPtId++,text,done:false,due});renderProjects();saveData();} }
 function deleteProject(id){ if(!confirm('Delete this project and all its tasks?'))return; projects=projects.filter(p=>p.id!==id);renderProjects();saveData(); }
 function showNewProjForm(){ document.getElementById('new-proj-form').classList.add('open'); document.getElementById('nf-name').focus(); }
-function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; }
-function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; projects.unshift({id:nextProjId++,name,color,status:'active',expanded:true,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
+function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; document.getElementById('nf-due').value=''; }
+function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; const due=document.getElementById('nf-due').value||null; projects.unshift({id:nextProjId++,name,color,status:'active',expanded:true,due,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
 
 // ─── Google Calendar OAuth ────────────────────────────────────────────────────
 function updateCalBadge(state){
