@@ -212,7 +212,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .leg-dot{width:8px;height:8px;border-radius:2px}
 .week-no-cal{flex:1;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-tertiary)}
 
-/* ── Suggest btn ── */
+/* ── Schedule Planner ── */
+.planner-day{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px}
+.planner-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.planner-day-name{font-size:13px;font-weight:500}
+.planner-day-date{font-size:11px;color:var(--text-tertiary)}
+.planner-busy{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;padding:4px 8px;background:var(--bg-secondary);border-radius:var(--radius-md)}
+.planner-block{display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:var(--radius-md);margin-bottom:5px}
+.planner-block.free{background:var(--green-bg)}
+.planner-block.task-block{background:var(--blue-bg)}
+.planner-block.tight{background:var(--amber-bg)}
+.planner-time{font-size:11px;font-weight:500;white-space:nowrap;flex-shrink:0;width:80px}
+.planner-block.free .planner-time{color:var(--green-text)}
+.planner-block.task-block .planner-time{color:var(--blue-text)}
+.planner-block.tight .planner-time{color:var(--amber-text)}
+.planner-detail{flex:1}
+.planner-detail-title{font-size:12px;font-weight:500}
+.planner-block.free .planner-detail-title{color:var(--green-text)}
+.planner-block.task-block .planner-detail-title{color:var(--blue-text)}
+.planner-block.tight .planner-detail-title{color:var(--amber-text)}
+.planner-detail-sub{font-size:10px;opacity:.75;margin-top:1px}
+.planner-block.free .planner-detail-sub{color:var(--green-text)}
+.planner-block.task-block .planner-detail-sub{color:var(--blue-text)}
+.planner-block.tight .planner-detail-sub{color:var(--amber-text)}
+.planner-no-cal{font-size:12px;color:var(--text-tertiary);padding:20px;text-align:center;background:var(--bg-secondary);border-radius:var(--radius-md)}
+.planner-overdue{background:var(--red-bg);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:12px}
+.planner-overdue-title{font-size:11px;font-weight:500;color:var(--red-text);margin-bottom:6px}
+.planner-overdue-item{font-size:11px;color:var(--red-text);padding:2px 0}
 .suggest-btn{background:var(--bg-secondary);border:0.5px dashed var(--border-mid);border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;text-align:left;width:100%}
 .suggest-btn:hover{background:var(--bg-primary);color:var(--text-primary)}
 
@@ -241,6 +267,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" onclick="showView('projects',this)">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>Projects
     </div>
+    <div class="nav-item" onclick="showView('planner',this)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Schedule
+    </div>
   </div>
   <div class="sidebar-divider"></div>
   <div class="nav-section">
@@ -250,6 +279,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button id="gcal-signin-btn" onclick="gcalSignIn()" style="background:var(--blue-border);border:none;border-radius:var(--radius-md);padding:5px 10px;font-size:11px;font-weight:500;color:white;cursor:pointer;width:100%">Sign in to Google</button>
       <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
       <button id="gcal-sync-btn" onclick="syncProjectTasksFromGoogle()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#8635; Sync projects</button>
+      <button id="drive-sync-btn" onclick="loadFromDrive()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#9729; Sync from Drive</button>
     </div>
   </div>
   <div class="weather-sb">
@@ -391,6 +421,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
   </div>
 
+  <!-- ── SCHEDULE PLANNER VIEW ── -->
+  <div id="view-planner" class="view">
+    <div class="scroll-content">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:11px;color:var(--text-tertiary)">Open project tasks assigned to free time blocks this week</div>
+        <button class="btn" onclick="buildSchedulePlanner()" style="font-size:11px;padding:4px 10px">&#8635; Refresh</button>
+      </div>
+      <div id="planner-content"></div>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
 <script>
@@ -398,7 +439,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const TASK_KEY = 'dayplanner_tasks_v2';
 const PROJ_KEY = 'dayplanner_projects_v2';
 const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googleusercontent.com';
-const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks';
+const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive.appdata';
 
 // ─── Default data ─────────────────────────────────────────────────────────────
 const DEFAULT_TASKS = [
@@ -500,10 +541,17 @@ function eventsForDay(date){
 }
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
+const DRIVE_FILENAME = 'dayplanner-data.json';
+let driveFileId = null;
+
 function loadData(){
+  // Load from localStorage as baseline (Drive load happens after sign-in)
   try{ const d=JSON.parse(localStorage.getItem(TASK_KEY)); tasks=d.tasks; nextTaskId=d.nextId||200; }catch(e){ tasks=DEFAULT_TASKS; }
   try{ const d=JSON.parse(localStorage.getItem(PROJ_KEY)); projects=d.projects; nextProjId=d.nextProjId||300; nextPtId=d.nextPtId||500; }catch(e){ projects=DEFAULT_PROJECTS; }
+  // Restore driveFileId if cached
+  driveFileId=localStorage.getItem('dayplanner_drive_file_id')||null;
 }
+
 function saveData(){
   setBadge('saving');
   try{
@@ -511,11 +559,81 @@ function saveData(){
     localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
     setBadge('saved');
   }catch(e){ setBadge('error'); }
+  // Also save to Drive if signed in (debounced)
+  if(gcalToken) scheduleDriveSave();
 }
+
+let driveSaveTimer=null;
+function scheduleDriveSave(){
+  clearTimeout(driveSaveTimer);
+  driveSaveTimer=setTimeout(saveToDrive, 1500);
+}
+
+function getPayload(){
+  return JSON.stringify({tasks, nextTaskId, projects, nextProjId, nextPtId, savedAt:new Date().toISOString()});
+}
+
+async function saveToDrive(){
+  if(!gcalToken) return;
+  try{
+    const payload=getPayload();
+    const meta={name:DRIVE_FILENAME,parents:['appDataFolder']};
+    if(driveFileId){
+      // Update existing file
+      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{
+        method:'PATCH',
+        headers:{Authorization:'Bearer '+gcalToken,'Content-Type':'application/json'},
+        body:payload
+      });
+    } else {
+      // Create new file in appDataFolder
+      const form=new FormData();
+      form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+      form.append('file',new Blob([payload],{type:'application/json'}));
+      const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+        method:'POST', headers:{Authorization:'Bearer '+gcalToken}, body:form
+      });
+      const data=await res.json();
+      driveFileId=data.id;
+      localStorage.setItem('dayplanner_drive_file_id',driveFileId);
+    }
+    setBadge('cloud');
+  }catch(e){ console.error('Drive save error:',e); }
+}
+
+async function loadFromDrive(){
+  if(!gcalToken) return;
+  setBadge('syncing');
+  try{
+    // Search appDataFolder for our file
+    const search=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22'+DRIVE_FILENAME+'%22&fields=files(id,modifiedTime)',{
+      headers:{Authorization:'Bearer '+gcalToken}
+    });
+    const sdata=await search.json();
+    const files=(sdata.files||[]).sort((a,b)=>b.modifiedTime>a.modifiedTime?1:-1);
+    if(!files.length){ setBadge('saved'); return; } // no cloud data yet
+    driveFileId=files[0].id;
+    localStorage.setItem('dayplanner_drive_file_id',driveFileId);
+    const res=await fetch('https://www.googleapis.com/drive/v3/files/'+driveFileId+'?alt=media',{
+      headers:{Authorization:'Bearer '+gcalToken}
+    });
+    const d=await res.json();
+    if(d.tasks){ tasks=d.tasks; nextTaskId=d.nextTaskId||200; }
+    if(d.projects){ projects=d.projects; nextProjId=d.nextProjId||300; nextPtId=d.nextPtId||500; }
+    // Update localStorage too
+    localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
+    localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+    setBadge('cloud');
+    renderTasks(); renderProjects(); buildTodayTimeline();
+  }catch(e){ console.error('Drive load error:',e); setBadge('saved'); }
+}
+
 function setBadge(s){
   const b=document.getElementById('save-badge');
   if(s==='saving'){b.textContent='Saving...';b.className='badge badge-saving';}
-  else if(s==='saved'){b.textContent='✓ Saved';b.className='badge badge-success';}
+  else if(s==='syncing'){b.textContent='Syncing...';b.className='badge badge-saving';}
+  else if(s==='saved'){b.textContent='✓ Saved locally';b.className='badge badge-success';}
+  else if(s==='cloud'){b.textContent='✓ Synced to Drive';b.className='badge badge-success';}
   else{b.textContent='Error';b.className='badge';}
 }
 
@@ -529,10 +647,11 @@ function showView(name, navEl){
 
   const now = new Date();
   const titles = {
-    today: '',  // set by updateTodayTitle
+    today: '',
     week: weekTitle(),
     tasks: 'All tasks',
     projects: 'Projects',
+    planner: 'Schedule planner',
   };
   if(name==='today'){ updateTodayTitle(); }
   else { document.getElementById('topbar-title').textContent = titles[name]||name; }
@@ -545,6 +664,7 @@ function showView(name, navEl){
 
   if(name==='week'){ buildWeekView(); }
   if(name==='today'){ buildTodayTimeline(); }
+  if(name==='planner'){ buildSchedulePlanner(); }
 }
 
 function updateTodayTitle(){
@@ -1361,7 +1481,9 @@ function initGoogleAuth(){
       document.getElementById('gcal-signin-btn').style.display='none';
       document.getElementById('gcal-signout-btn').style.display='';
       document.getElementById('gcal-sync-btn').style.display='';
+      document.getElementById('drive-sync-btn').style.display='';
       updateCalBadge('syncing');
+      await loadFromDrive();
       await fetchCalendarEvents();
       await fetchGoogleTasks();
       await syncProjectTasksFromGoogle();
@@ -1380,6 +1502,7 @@ function gcalSignOut(){
   document.getElementById('gcal-signin-btn').style.display='';
   document.getElementById('gcal-signout-btn').style.display='none';
   document.getElementById('gcal-sync-btn').style.display='none';
+  document.getElementById('drive-sync-btn').style.display='none';
   updateCalBadge('signed-out');
   buildTodayTimeline();
   if(currentView==='week') showWeekNoCal();
@@ -1499,7 +1622,184 @@ async function fetchWeather(){
   }
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// ─── Schedule Planner ─────────────────────────────────────────────────────────
+function buildSchedulePlanner(){
+  const el=document.getElementById('planner-content');
+  if(!el) return;
+  el.innerHTML='';
+
+  const now=new Date();
+  const mon=getMondayForView(); // use current week
+
+  // Gather open project tasks with due dates, sorted by due date
+  const openTasks=[];
+  projects.forEach(proj=>{
+    if(proj.status==='archived') return;
+    proj.tasks.forEach(t=>{
+      if(!t.done) openTasks.push({...t, projName:proj.name, projColor:proj.color});
+    });
+  });
+  openTasks.sort((a,b)=>{
+    if(!a.due&&!b.due) return 0;
+    if(!a.due) return 1; if(!b.due) return -1;
+    return a.due<b.due?-1:1;
+  });
+
+  // Overdue tasks
+  const overdue=openTasks.filter(t=>t.due&&t.due<now.toISOString().split('T')[0]);
+  if(overdue.length){
+    const box=document.createElement('div'); box.className='planner-overdue';
+    const title=document.createElement('div'); title.className='planner-overdue-title';
+    title.textContent=`⚠ ${overdue.length} overdue task${overdue.length>1?'s':''} — reschedule or complete immediately`;
+    box.appendChild(title);
+    overdue.forEach(t=>{
+      const item=document.createElement('div'); item.className='planner-overdue-item';
+      item.textContent=`${t.text} (${t.projName}) — was due ${new Date(t.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+      box.appendChild(item);
+    });
+    el.appendChild(box);
+  }
+
+  if(!gcalToken){
+    const msg=document.createElement('div'); msg.className='planner-no-cal';
+    msg.textContent='Sign in to Google Calendar to see your schedule and get time block recommendations.';
+    el.appendChild(msg);
+    // Still show task list without calendar
+    buildTaskOnlyPlanner(el, openTasks, mon);
+    return;
+  }
+
+  // Build day-by-day schedule for Mon–Fri
+  const WORK_START=8, WORK_END=18; // 8am–6pm
+  const BLOCK_MIN=45; // minimum useful work block in minutes
+  const taskQueue=[...openTasks.filter(t=>!t.due||t.due>=now.toISOString().split('T')[0])];
+  let taskIdx=0;
+
+  for(let d=0;d<5;d++){
+    const dayDate=new Date(mon); dayDate.setDate(mon.getDate()+d);
+    const isPast=dayDate<new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    if(isPast) continue;
+
+    const dayStr=dayDate.toISOString().split('T')[0];
+    const dayName=['Monday','Tuesday','Wednesday','Thursday','Friday'][d];
+    const dayLabel=dayDate.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const isToday=sameDay(dayDate,now);
+
+    // Get calendar events for this day, sorted by start
+    const dayEvs=eventsForDay(dayDate)
+      .filter(e=>e.start.dateTime)
+      .map(e=>({start:new Date(e.start.dateTime),end:new Date(e.end.dateTime),title:e.summary||'Event'}))
+      .sort((a,b)=>a.start-b.start);
+
+    // Find free blocks within work hours
+    const freeBlocks=[];
+    let cursor=new Date(dayDate); cursor.setHours(WORK_START,0,0,0);
+    const dayEnd=new Date(dayDate); dayEnd.setHours(WORK_END,0,0,0);
+    // If today, start from now
+    if(isToday && now>cursor) cursor=new Date(Math.ceil(now.getTime()/(15*60000))*(15*60000));
+
+    dayEvs.forEach(ev=>{
+      if(ev.start>cursor && ev.start<dayEnd){
+        const gapMin=(ev.start-cursor)/60000;
+        if(gapMin>=BLOCK_MIN) freeBlocks.push({start:new Date(cursor),end:new Date(ev.start),minutes:Math.round(gapMin)});
+      }
+      if(ev.end>cursor) cursor=new Date(Math.max(cursor,ev.end));
+    });
+    // Remaining time after last event
+    if(cursor<dayEnd){
+      const gapMin=(dayEnd-cursor)/60000;
+      if(gapMin>=BLOCK_MIN) freeBlocks.push({start:new Date(cursor),end:new Date(dayEnd),minutes:Math.round(gapMin)});
+    }
+
+    if(freeBlocks.length===0 && dayEvs.length===0 && !isToday) continue; // skip fully empty non-today days
+
+    const dayCard=document.createElement('div'); dayCard.className='planner-day';
+
+    const hdr=document.createElement('div'); hdr.className='planner-day-header';
+    const dn=document.createElement('div'); dn.className='planner-day-name';
+    dn.textContent=isToday?'Today ('+dayName+')':dayName;
+    const dl=document.createElement('div'); dl.className='planner-day-date'; dl.textContent=dayLabel;
+    hdr.appendChild(dn); hdr.appendChild(dl); dayCard.appendChild(hdr);
+
+    // Show busy events summary
+    if(dayEvs.length){
+      const busy=document.createElement('div'); busy.className='planner-busy';
+      busy.textContent='Busy: '+dayEvs.map(e=>{
+        const h=e.start.getHours(), m=e.start.getMinutes();
+        const ap=h>=12?'PM':'AM'; const h12=h%12||12;
+        return `${h12}${m?':'+String(m).padStart(2,'0'):''}${ap} ${e.title.length>20?e.title.slice(0,19)+'…':e.title}`;
+      }).join(' · ');
+      dayCard.appendChild(busy);
+    }
+
+    if(freeBlocks.length===0){
+      const full=document.createElement('div'); full.className='planner-block tight';
+      const t=document.createElement('div'); t.className='planner-time'; t.textContent='All day';
+      const d=document.createElement('div'); d.className='planner-detail';
+      d.innerHTML='<div class="planner-detail-title">Fully booked</div><div class="planner-detail-sub">No available work blocks</div>';
+      full.appendChild(t); full.appendChild(d); dayCard.appendChild(full);
+    } else {
+      // Assign tasks to free blocks greedily
+      freeBlocks.forEach(block=>{
+        const startH=block.start.getHours(), startM=block.start.getMinutes();
+        const endH=block.end.getHours(), endM=block.end.getMinutes();
+        const fmt=h=>{ const ap=h>=12?'PM':'AM'; const h12=h%12||12; return h12+(h===Math.floor(h)?'':'')+ap; };
+        const fmtFull=(h,m)=>{ const ap=h>=12?'PM':'AM'; const h12=h%12||12; return h12+(m?':'+String(m).padStart(2,'0'):'')+' '+ap; };
+        const timeStr=fmtFull(startH,startM)+' – '+fmtFull(endH,endM);
+
+        // Find tasks due on or before this day's deadline
+        const urgentTask=taskQueue.find(t=>t.due&&t.due<=dayStr);
+        const assignedTask=urgentTask||taskQueue[taskIdx%Math.max(taskQueue.length,1)];
+
+        if(assignedTask && taskQueue.length>0){
+          const isUrgent=assignedTask.due&&assignedTask.due<=dayStr;
+          const blockEl=document.createElement('div'); blockEl.className='planner-block '+(isUrgent?'tight':'task-block');
+          const tEl=document.createElement('div'); tEl.className='planner-time'; tEl.textContent=timeStr;
+          const dEl=document.createElement('div'); dEl.className='planner-detail';
+          const dueLabel=assignedTask.due?new Date(assignedTask.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'no deadline';
+          dEl.innerHTML=`<div class="planner-detail-title">${esc(assignedTask.text)}</div><div class="planner-detail-sub">${esc(assignedTask.projName)} · ${block.minutes} min available · due ${dueLabel}</div>`;
+          blockEl.appendChild(tEl); blockEl.appendChild(dEl); dayCard.appendChild(blockEl);
+          // Remove assigned task from queue
+          const qi=taskQueue.indexOf(assignedTask);
+          if(qi>-1) taskQueue.splice(qi,1);
+        } else {
+          const blockEl=document.createElement('div'); blockEl.className='planner-block free';
+          const tEl=document.createElement('div'); tEl.className='planner-time'; tEl.textContent=timeStr;
+          const dEl=document.createElement('div'); dEl.className='planner-detail';
+          dEl.innerHTML=`<div class="planner-detail-title">Free time</div><div class="planner-detail-sub">${block.minutes} min — no tasks pending</div>`;
+          blockEl.appendChild(tEl); blockEl.appendChild(dEl); dayCard.appendChild(blockEl);
+        }
+      });
+    }
+
+    el.appendChild(dayCard);
+  }
+
+  // Any unscheduled tasks
+  if(taskQueue.length){
+    const warn=document.createElement('div');
+    warn.style.cssText='font-size:11px;color:var(--text-tertiary);padding:10px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);margin-top:4px';
+    const taskList=taskQueue.map(t=>t.text+' ('+t.projName+(t.due?' · due '+new Date(t.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'')+')').join('<br>');
+    warn.innerHTML='<strong style="color:var(--text-secondary)">'+taskQueue.length+' task'+(taskQueue.length>1?'s':'')+' could not be scheduled this week:</strong><br>'+taskList;
+    el.appendChild(warn);
+  }
+}
+
+function buildTaskOnlyPlanner(el, tasks, mon){
+  if(!tasks.length){ const m=document.createElement('div'); m.style.cssText='font-size:12px;color:var(--text-tertiary);padding:12px'; m.textContent='No open project tasks found.'; el.appendChild(m); return; }
+  const list=document.createElement('div'); list.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:12px';
+  const lbl=document.createElement('div'); lbl.style.cssText='font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px'; lbl.textContent='Open project tasks';
+  list.appendChild(lbl);
+  tasks.forEach(t=>{
+    const row=document.createElement('div'); row.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-md)';
+    const dot=document.createElement('div'); dot.style.cssText=`width:8px;height:8px;border-radius:50%;background:${t.projColor};flex-shrink:0`;
+    const txt=document.createElement('div'); txt.style.cssText='flex:1;font-size:12px'; txt.textContent=t.text;
+    const proj=document.createElement('span'); proj.style.cssText=`font-size:10px;padding:2px 6px;border-radius:8px;background:${t.projColor}22;color:${t.projColor}`; proj.textContent=t.projName;
+    const due=document.createElement('span'); due.style.cssText='font-size:10px;color:var(--text-tertiary);white-space:nowrap'; due.textContent=t.due?new Date(t.due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'No date';
+    row.appendChild(dot); row.appendChild(txt); row.appendChild(proj); row.appendChild(due); list.appendChild(row);
+  });
+  el.appendChild(list);
+}
 loadData();
 renderTasks();
 renderProjects();
