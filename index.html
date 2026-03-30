@@ -197,9 +197,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .wh-num{font-size:18px;font-weight:500;color:var(--text-secondary);line-height:1.2}
 .wh-today{color:white;background:var(--blue-border);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;margin:2px auto 0}
 .week-grid-scroll{flex:1;overflow-y:auto}
-.week-grid{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr));align-items:start}
+.week-grid{display:flex;align-items:flex-start}
 .wg-label{font-size:10px;color:var(--text-tertiary);padding:3px 5px 0;text-align:right;border-right:0.5px solid var(--border-light);height:52px;flex-shrink:0}
-.wg-col{border-right:0.5px solid var(--border-light);position:relative}
+.wg-col{flex:1;position:relative;min-width:0}
 .wg-col:last-child{border-right:none}
 .wg-hour-line{position:absolute;left:0;right:0;height:0.5px;background:var(--border-light);pointer-events:none}
 .wg-ev{position:absolute;border-radius:3px;padding:2px 5px;font-size:10px;overflow:hidden;border-left:2px solid var(--blue-border);background:var(--blue-bg);box-sizing:border-box;z-index:1}
@@ -803,105 +803,122 @@ function buildWeekGrid(){
   if(!grid) return;
   grid.innerHTML='';
   const now=new Date(), mon=getMondayForView();
-  const HOUR_H=52; // px per hour
-  const START_H=6, END_H=22; // display range
+  const HOUR_H=56; // px per hour
+  const START_H=6, END_H=22;
   const totalH=(END_H-START_H)*HOUR_H;
 
-  // Build time label column
+  // Helper: minutes from START_H for a Date object (local time)
+  function minsFromStart(dt){ return (dt.getHours()-START_H)*60+dt.getMinutes(); }
+
+  // Time label column
   const labelCol=document.createElement('div');
-  labelCol.style.cssText='grid-column:1;position:relative;border-right:0.5px solid var(--border-light)';
+  labelCol.style.cssText='position:relative;border-right:0.5px solid var(--border-light);height:'+totalH+'px;flex-shrink:0;width:48px';
   for(let h=START_H;h<END_H;h++){
     const lbl=document.createElement('div');
-    lbl.className='wg-label';
-    lbl.style.cssText=`position:absolute;top:${(h-START_H)*HOUR_H}px;left:0;right:0;height:${HOUR_H}px;border-top:none;`;
+    lbl.style.cssText='position:absolute;left:0;right:0;top:'+((h-START_H)*HOUR_H)+'px;height:'+HOUR_H+'px;display:flex;align-items:flex-start;justify-content:flex-end;padding:3px 5px 0;font-size:10px;color:var(--text-tertiary)';
     lbl.textContent=h===0?'12 AM':h<12?h+' AM':h===12?'12 PM':(h-12)+' PM';
     labelCol.appendChild(lbl);
+    // Hour line
+    const line=document.createElement('div');
+    line.style.cssText='position:absolute;left:0;right:0;top:'+((h-START_H)*HOUR_H)+'px;height:0.5px;background:var(--border-light)';
+    labelCol.appendChild(line);
   }
-  labelCol.style.height=totalH+'px';
   grid.appendChild(labelCol);
 
-  // Build one column per day
+  // Five day columns
   for(let d=0;d<5;d++){
     const dayDate=new Date(mon); dayDate.setDate(mon.getDate()+d);
     const col=document.createElement('div');
     col.className='wg-col';
-    col.style.height=totalH+'px';
+    col.style.cssText='position:relative;height:'+totalH+'px;border-left:0.5px solid var(--border-light)';
 
-    // Hour lines
+    // Hour lines inside column
     for(let h=START_H;h<END_H;h++){
       const line=document.createElement('div');
-      line.className='wg-hour-line';
-      line.style.top=((h-START_H)*HOUR_H)+'px';
+      line.style.cssText='position:absolute;left:0;right:0;top:'+((h-START_H)*HOUR_H)+'px;height:0.5px;background:var(--border-light);pointer-events:none';
       col.appendChild(line);
     }
 
-    // Now line (today only)
+    // Now line
     if(weekOffset===0 && sameDay(dayDate,now)){
-      const nowTop=((now.getHours()-START_H)*HOUR_H)+(now.getMinutes()/60*HOUR_H);
-      const nl=document.createElement('div');
-      nl.className='now-line-week';
-      nl.style.top=Math.round(nowTop)+'px';
-      nl.innerHTML='<div class="now-dot-week"></div>';
-      col.appendChild(nl);
+      const nowMins=minsFromStart(now);
+      if(nowMins>=0 && nowMins<(END_H-START_H)*60){
+        const nowTop=Math.round(nowMins/60*HOUR_H);
+        const nl=document.createElement('div');
+        nl.className='now-line-week';
+        nl.style.top=nowTop+'px';
+        nl.innerHTML='<div class="now-dot-week"></div>';
+        col.appendChild(nl);
+      }
     }
 
-    // Get events for this day that have a time (not all-day)
-    const dayEvs=eventsForDay(dayDate).filter(e=>e.start.dateTime);
+    // Get timed events for this day using LOCAL date comparison
+    const dayEvs=calEvents.filter(e=>{
+      if(!e.start||!e.start.dateTime) return false;
+      const s=new Date(e.start.dateTime);
+      return s.getFullYear()===dayDate.getFullYear() &&
+             s.getMonth()===dayDate.getMonth() &&
+             s.getDate()===dayDate.getDate();
+    });
 
-    // Overlap detection — build groups of overlapping events
-    // Sort by start time
-    const timed=dayEvs.map(e=>({
-      e,
-      start:new Date(e.start.dateTime),
-      end:e.end&&e.end.dateTime?new Date(e.end.dateTime):new Date(new Date(e.start.dateTime).getTime()+30*60000)
-    })).sort((a,b)=>a.start-b.start);
+    // Sort by start
+    const timed=dayEvs.map(e=>{
+      const start=new Date(e.start.dateTime);
+      const end=e.end&&e.end.dateTime?new Date(e.end.dateTime):new Date(start.getTime()+30*60000);
+      return {e,start,end};
+    }).sort((a,b)=>a.start-b.start);
 
-    // Assign columns within overlapping groups
-    const slots=[]; // array of {event, col, totalCols}
-    const active=[]; // currently active events by their assigned sub-column
+    // Overlap detection — assign sub-columns
+    const slots=[];
+    const active=[];
     timed.forEach(ev=>{
-      // Remove events that have ended
-      const stillActive=active.filter(a=>a.end>ev.start);
-      active.length=0; stillActive.forEach(a=>active.push(a));
-      // Find first free sub-column
-      const usedCols=active.map(a=>a.subCol);
-      let subCol=0;
-      while(usedCols.includes(subCol)) subCol++;
+      // Clear ended events
+      for(let i=active.length-1;i>=0;i--){ if(active[i].end<=ev.start) active.splice(i,1); }
+      const usedCols=new Set(active.map(a=>a.subCol));
+      let subCol=0; while(usedCols.has(subCol)) subCol++;
       ev.subCol=subCol;
       active.push(ev);
       slots.push(ev);
     });
 
-    // Second pass: compute totalCols per overlap group
+    // Second pass: totalCols = max overlapping in each event's group
     slots.forEach(ev=>{
-      // Max sub-column index among all events overlapping with this one
-      const maxSubCol=slots
-        .filter(other=>other.start<ev.end && other.end>ev.start)
-        .reduce((m,o)=>Math.max(m,o.subCol),0);
-      ev.totalCols=maxSubCol+1;
+      ev.totalCols=slots
+        .filter(o=>o.start<ev.end && o.end>ev.start)
+        .reduce((m,o)=>Math.max(m,o.subCol+1),1);
     });
 
-    // Render events
+    // Render
     slots.forEach(({e,start,end,subCol,totalCols})=>{
-      const topPx=((start.getHours()-START_H)*HOUR_H)+(start.getMinutes()/60*HOUR_H);
-      const durMin=(end-start)/(1000*60);
-      const heightPx=Math.max(18, durMin/60*HOUR_H-2);
-      const widthPct=100/totalCols;
-      const leftPct=subCol*widthPct;
+      // Clamp to display range
+      const startMins=Math.max(minsFromStart(start),0);
+      const endMins=Math.min(minsFromStart(end),(END_H-START_H)*60);
+      if(startMins>=endMins) return; // entirely outside range
+
+      const topPx=Math.round(startMins/60*HOUR_H);
+      const heightPx=Math.max(20,Math.round((endMins-startMins)/60*HOUR_H)-2);
+      const W=100/totalCols;
+      const L=subCol*W;
 
       const div=document.createElement('div');
       div.className='wg-ev';
-      div.style.cssText=`top:${Math.round(topPx)}px;height:${Math.round(heightPx)}px;left:calc(${leftPct.toFixed(1)}% + 2px);width:calc(${widthPct.toFixed(1)}% - 4px);`;
-      div.innerHTML=`<div class="wg-ev-t">${esc(e.summary||'(no title)')}</div>${heightPx>28?'<div class="wg-ev-m">'+fmtRange(e)+'</div>':''}`;
+      div.style.cssText=`top:${topPx}px;height:${heightPx}px;left:calc(${L.toFixed(2)}% + 1px);width:calc(${W.toFixed(2)}% - 2px);overflow:hidden`;
+      div.innerHTML=`<div class="wg-ev-t">${esc(e.summary||'(no title)')}</div>`+
+                    (heightPx>30?`<div class="wg-ev-m">${fmtRange(e)}</div>`:'');
       col.appendChild(div);
     });
 
-    // All-day events at top as a small strip if any
-    const allDay=eventsForDay(dayDate).filter(e=>!e.start.dateTime);
+    // All-day events — small banner at very top
+    const allDay=calEvents.filter(e=>{
+      if(!e.start||e.start.dateTime) return false;
+      const ds=e.start.date;
+      const colStr=dayDate.getFullYear()+'-'+String(dayDate.getMonth()+1).padStart(2,'0')+'-'+String(dayDate.getDate()).padStart(2,'0');
+      return ds===colStr;
+    });
     if(allDay.length){
-      allDay.forEach(e=>{
+      allDay.forEach((e,i)=>{
         const strip=document.createElement('div');
-        strip.style.cssText='position:absolute;top:2px;left:2px;right:2px;background:var(--blue-bg);border-left:2px solid var(--blue-border);border-radius:3px;padding:1px 4px;font-size:9px;color:var(--blue-text);font-weight:500;z-index:2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis';
+        strip.style.cssText=`position:absolute;top:${i*16}px;left:1px;right:1px;background:var(--blue-bg);border-left:2px solid var(--blue-border);border-radius:2px;padding:1px 4px;font-size:9px;color:var(--blue-text);font-weight:500;z-index:2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis`;
         strip.textContent=e.summary||'(all day)';
         col.appendChild(strip);
       });
@@ -910,13 +927,11 @@ function buildWeekGrid(){
     grid.appendChild(col);
   }
 
-  // Scroll to current hour
-  if(weekOffset===0){
-    const scrollEl=document.getElementById('week-grid-scroll');
-    if(scrollEl){
-      const px=Math.max(0,(now.getHours()-START_H)*HOUR_H-60);
-      setTimeout(()=>{ scrollEl.scrollTop=px; },50);
-    }
+  // Scroll to current hour (or 8am)
+  const scrollEl=document.getElementById('week-grid-scroll');
+  if(scrollEl){
+    const targetH=weekOffset===0?Math.max(START_H,now.getHours()-1):8;
+    setTimeout(()=>{ scrollEl.scrollTop=(targetH-START_H)*HOUR_H-20; },50);
   }
 }
 
