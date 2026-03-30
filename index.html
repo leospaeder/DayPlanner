@@ -210,7 +210,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .week-legend{display:flex;gap:12px;padding:8px 16px;border-top:0.5px solid var(--border-light);background:var(--bg-primary);flex-shrink:0;flex-wrap:wrap}
 .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-tertiary)}
 .leg-dot{width:8px;height:8px;border-radius:2px}
-.week-no-cal{flex:1;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-tertiary)}
+.week-due-strip{display:grid;grid-template-columns:48px repeat(5,minmax(0,1fr));flex-shrink:0;background:var(--bg-secondary);border-bottom:0.5px solid var(--border-light)}
+.week-due-spacer{border-right:0.5px solid var(--border-light)}
+.week-due-col{border-left:0.5px solid var(--border-light);padding:4px 5px;min-height:0;display:flex;flex-direction:column;gap:2px}
+.week-due-item{font-size:9px;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;display:flex;align-items:center;gap:3px}
+.week-due-item.done{opacity:.45;text-decoration:line-through}
+.week-due-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 
 /* ── Schedule Planner ── */
 .planner-day{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px}
@@ -363,6 +368,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="wh-day"><div class="wh-name" id="wh4n">Fri</div><div id="wh4d" class="wh-num">—</div></div>
     </div>
     <!-- Calendar grid or sign-in prompt -->
+    <!-- Due tasks strip -->
+    <div class="week-due-strip" id="week-due-strip" style="display:none">
+      <div class="week-due-spacer"></div>
+      <div class="week-due-col" id="wdue0"></div>
+      <div class="week-due-col" id="wdue1"></div>
+      <div class="week-due-col" id="wdue2"></div>
+      <div class="week-due-col" id="wdue3"></div>
+      <div class="week-due-col" id="wdue4"></div>
+    </div>
     <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">
       <div id="week-no-cal" class="week-no-cal">Sign in to Google Calendar to see your events.</div>
       <div id="week-grid-scroll" style="display:none;flex:1;overflow-y:auto">
@@ -814,8 +828,61 @@ function buildTodayTimeline(){
 function buildWeekView(){
   buildWeekDates();
   buildWeekWeather();
+  buildWeekDueTasks();
   if(gcalToken){ showWeekGrid(); buildWeekGrid(); }
   else { showWeekNoCal(); }
+}
+
+function buildWeekDueTasks(){
+  const strip=document.getElementById('week-due-strip');
+  if(!strip) return;
+  const mon=getMondayForView();
+  let hasAny=false;
+
+  for(let d=0;d<5;d++){
+    const col=document.getElementById('wdue'+d);
+    if(!col) continue;
+    col.innerHTML='';
+    const dayDate=new Date(mon); dayDate.setDate(mon.getDate()+d);
+    const dayStr=dayDate.getFullYear()+'-'+String(dayDate.getMonth()+1).padStart(2,'0')+'-'+String(dayDate.getDate()).padStart(2,'0');
+
+    const dueTasks=[];
+
+    // Local tasks
+    tasks.filter(t=>t.due===dayStr).forEach(t=>{
+      dueTasks.push({text:t.text, done:t.done, color:'#378ADD',
+        onToggle:()=>{ t.done=!t.done; saveData(); buildWeekDueTasks(); renderTasks(); }});
+    });
+
+    // Project tasks
+    projects.forEach(proj=>{
+      proj.tasks.filter(t=>t.due===dayStr).forEach(t=>{
+        dueTasks.push({text:t.text, done:t.done, color:proj.color,
+          onToggle:()=>{ t.done=!t.done; saveData(); buildWeekDueTasks(); renderProjects(); renderTasks(); }});
+      });
+    });
+
+    // Google Tasks
+    googleTasks.filter(t=>t.due&&t.due.split('T')[0]===dayStr).forEach(t=>{
+      dueTasks.push({text:t.text, done:t.done, color:'#1D9E75',
+        onToggle:()=>toggleGoogleTask(t.listId,t.taskId,t.done)});
+    });
+
+    if(dueTasks.length) hasAny=true;
+    dueTasks.forEach(t=>{
+      const item=document.createElement('div');
+      item.className='week-due-item'+(t.done?' done':'');
+      item.title=t.text;
+      const dot=document.createElement('div'); dot.className='week-due-dot'; dot.style.background=t.color;
+      const label=document.createElement('span'); label.textContent=t.text; label.style.color=t.done?'var(--text-tertiary)':'var(--text-primary)';
+      item.style.background=t.color+'18';
+      item.appendChild(dot); item.appendChild(label);
+      item.onclick=()=>{ t.onToggle(); };
+      col.appendChild(item);
+    });
+  }
+
+  strip.style.display=hasAny?'grid':'none';
 }
 
 function buildWeekDates(){
@@ -1624,7 +1691,7 @@ async function fetchCalendarEvents(){
     calEvents=(data.items||[]).filter(e=>e.start&&(e.start.dateTime||e.start.date));
     updateCalBadge('synced');
     buildTodayTimeline();
-    if(currentView==='week'){ showWeekGrid(); buildWeekGrid(); }
+    if(currentView==='week'){ showWeekGrid(); buildWeekGrid(); buildWeekDueTasks(); }
   }catch(e){
     updateCalBadge('error');
     console.error('Calendar error:',e);
