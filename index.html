@@ -324,7 +324,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="timeline" id="today-timeline"></div>
       </div>
       <div>
-        <div class="sec-label">Priority tasks</div>
+        <div class="sec-label" id="due-today-label" style="display:none">Due today</div>
+        <div id="today-due"></div>
+      </div>
+      <div>
+        <div class="sec-label">Tasks</div>
         <div id="today-tasks"></div>
         <button class="suggest-btn" onclick="showView('tasks',document.querySelectorAll('.nav-item')[2])">Go to all tasks →</button>
       </div>
@@ -747,7 +751,53 @@ function buildTodayTimeline(){
     tl.appendChild(row);
   });
 
-  // Today tasks
+  // ── Due today section ──
+  const td=document.getElementById('today-due');
+  const tdLabel=document.getElementById('due-today-label');
+  if(td){
+    td.innerHTML='';
+    const viewStr=viewDate.toISOString().split('T')[0];
+
+    // Collect all tasks due on viewDate from all sources
+    const dueToday=[];
+
+    // Local tasks
+    tasks.filter(t=>t.due===viewStr).forEach(t=>{
+      dueToday.push({text:t.text, done:t.done, tag:TAG_LABELS[t.tag]||'Task', tagClass:TAG_CLASSES[t.tag]||'tag-w', tagColor:null, onToggle:()=>{ t.done=!t.done; saveData(); buildTodayTimeline(); renderTasks(); }});
+    });
+
+    // Project tasks
+    projects.forEach(proj=>{
+      proj.tasks.filter(t=>t.due===viewStr).forEach(t=>{
+        dueToday.push({text:t.text, done:t.done, tag:proj.name.length>14?proj.name.slice(0,13)+'…':proj.name, tagClass:'', tagColor:proj.color, onToggle:()=>{ t.done=!t.done; saveData(); buildTodayTimeline(); renderProjects(); renderTasks(); }});
+      });
+    });
+
+    // Google Tasks
+    googleTasks.filter(t=>{
+      if(!t.due) return false;
+      return t.due.split('T')[0]===viewStr;
+    }).forEach(t=>{
+      dueToday.push({text:t.text, done:t.done, tag:t.listTitle||'Tasks', tagClass:'', tagColor:'#1D9E75', onToggle:()=>toggleGoogleTask(t.listId,t.taskId,t.done)});
+    });
+
+    if(dueToday.length){
+      tdLabel.style.display='';
+      dueToday.forEach(t=>{
+        const row=document.createElement('div'); row.className='task-row';
+        const chk=document.createElement('div'); chk.className='check'+(t.done?' done':''); chk.onclick=t.onToggle;
+        const txt=document.createElement('div'); txt.className='task-text'+(t.done?' done':''); txt.textContent=t.text;
+        const tag=document.createElement('span'); tag.className='tag '+(t.tagClass||''); tag.textContent=t.tag;
+        if(t.tagColor&&!t.tagClass) tag.style.cssText=`background:${t.tagColor}22;color:${t.tagColor};border:0.5px solid ${t.tagColor}44`;
+        row.appendChild(chk); row.appendChild(txt); row.appendChild(tag);
+        td.appendChild(row);
+      });
+    } else {
+      tdLabel.style.display='none';
+    }
+  }
+
+  // ── General tasks (open, not filtered by date) ──
   const tt=document.getElementById('today-tasks');
   if(tt){
     tt.innerHTML='';
