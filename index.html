@@ -595,22 +595,31 @@ async function saveToDrive(){
   if(!gcalToken) return;
   try{
     const payload=getPayload();
-    const meta={name:DRIVE_FILENAME,parents:['appDataFolder']};
     if(driveFileId){
-      // Update existing file
-      await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{
+      // Try to update existing file
+      const res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{
         method:'PATCH',
         headers:{Authorization:'Bearer '+gcalToken,'Content-Type':'application/json'},
         body:payload
       });
+      if(res.status===404){
+        // File deleted from Drive — clear cached ID and recreate
+        driveFileId=null;
+        localStorage.removeItem('dayplanner_drive_file_id');
+        await saveToDrive();
+        return;
+      }
+      if(!res.ok){ console.error('Drive update failed:',res.status); return; }
     } else {
       // Create new file in appDataFolder
+      const meta={name:DRIVE_FILENAME,parents:['appDataFolder']};
       const form=new FormData();
       form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
       form.append('file',new Blob([payload],{type:'application/json'}));
       const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
         method:'POST', headers:{Authorization:'Bearer '+gcalToken}, body:form
       });
+      if(!res.ok){ console.error('Drive create failed:',res.status); return; }
       const data=await res.json();
       driveFileId=data.id;
       localStorage.setItem('dayplanner_drive_file_id',driveFileId);
@@ -623,27 +632,43 @@ async function loadFromDrive(){
   if(!gcalToken) return;
   setBadge('syncing');
   try{
-    // Search appDataFolder for our file
-    const search=await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22'+DRIVE_FILENAME+'%22&fields=files(id,modifiedTime)',{
-      headers:{Authorization:'Bearer '+gcalToken}
-    });
+    // Always search by name — don't rely solely on cached ID
+    const search=await fetch(
+      'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22'+DRIVE_FILENAME+'%22&fields=files(id,modifiedTime)&orderBy=modifiedTime+desc',
+      {headers:{Authorization:'Bearer '+gcalToken}}
+    );
+    if(!search.ok){ setBadge('saved'); return; }
     const sdata=await search.json();
-    const files=(sdata.files||[]).sort((a,b)=>b.modifiedTime>a.modifiedTime?1:-1);
-    if(!files.length){ setBadge('saved'); return; } // no cloud data yet
+    const files=sdata.files||[];
+    if(!files.length){ setBadge('saved'); return; } // no cloud data yet — first time on this device
+
+    // Use the most recently modified file
     driveFileId=files[0].id;
     localStorage.setItem('dayplanner_drive_file_id',driveFileId);
+
     const res=await fetch('https://www.googleapis.com/drive/v3/files/'+driveFileId+'?alt=media',{
       headers:{Authorization:'Bearer '+gcalToken}
     });
+    if(!res.ok){ setBadge('saved'); return; }
+
     const d=await res.json();
-    if(d.tasks){ tasks=d.tasks; nextTaskId=d.nextTaskId||200; }
-    if(d.projects){ projects=d.projects; nextProjId=d.nextProjId||300; nextPtId=d.nextPtId||500; }
-    // Update localStorage too
+    if(d.tasks&&Array.isArray(d.tasks)){
+      tasks=d.tasks; nextTaskId=d.nextTaskId||nextTaskId;
+    }
+    if(d.projects&&Array.isArray(d.projects)){
+      projects=d.projects; nextProjId=d.nextProjId||nextProjId; nextPtId=d.nextPtId||nextPtId;
+    }
+
+    // Mirror to localStorage so offline access works
     localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
     localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
     setBadge('cloud');
     renderTasks(); renderProjects(); buildTodayTimeline();
-  }catch(e){ console.error('Drive load error:',e); setBadge('saved'); }
+    if(currentView==='week') buildWeekView();
+  }catch(e){
+    console.error('Drive load error:',e);
+    setBadge('saved');
+  }
 }
 
 function setBadge(s){
