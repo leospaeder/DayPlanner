@@ -285,6 +285,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button id="gcal-signout-btn" onclick="gcalSignOut()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">Sign out</button>
       <button id="gcal-sync-btn" onclick="syncProjectTasksFromGoogle()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#8635; Sync projects</button>
       <button id="drive-sync-btn" onclick="loadFromDrive()" style="display:none;background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#9729; Sync from Drive</button>
+      <button onclick="restoreFromSnapshot()" style="background:transparent;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:5px 10px;font-size:11px;color:var(--text-secondary);cursor:pointer;width:100%">&#8635; Restore backup</button>
     </div>
   </div>
   <div class="weather-sb">
@@ -460,40 +461,8 @@ const GCAL_CLIENT_ID = '472523410428-dnun69qeg02prr8q3g8ibd7a3i39biiu.apps.googl
 const GCAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive.appdata';
 
 // ─── Default data ─────────────────────────────────────────────────────────────
-const DEFAULT_TASKS = [
-  {id:1,text:'Review SgtMaj letter of continuity draft',tag:'w',pri:'h',done:false},
-  {id:2,text:'Send CIRRAS update to S3',tag:'w',pri:'m',done:true},
-  {id:3,text:'Research UniBw München requirements',tag:'p',pri:'m',done:false},
-  {id:4,text:'Submit travel request — next exercise',tag:'o',pri:'l',done:false},
-  {id:5,text:'EABO TTPs — Section 3 revisions',tag:'w',pri:'m',done:false},
-  {id:6,text:'Zeppelin University program comparison',tag:'p',pri:'l',done:false},
-];
-const DEFAULT_PROJECTS = [
-  {id:1,name:'EABO TTPs development',color:'#534AB7',expanded:false,tasks:[
-    {id:11,text:'Draft Section 1 — concept of operations',done:true},
-    {id:12,text:'Draft Section 3 — revisions',done:false},
-    {id:13,text:'Coordinate review with S3',done:true},
-    {id:14,text:'Final formatting and submission',done:false},
-  ]},
-  {id:2,name:'RESOLUTE DRAGON prep',color:'#378ADD',expanded:false,tasks:[
-    {id:21,text:'AAR prep — key lessons',done:false},
-    {id:22,text:'Logistics readiness brief',done:true},
-    {id:23,text:'Personnel accountability',done:true},
-    {id:24,text:'Equipment status report',done:false},
-    {id:25,text:'Coordinate with MLR S4',done:false},
-    {id:26,text:'Submit final AAR',done:false},
-  ]},
-  {id:3,name:'Doctoral program research',color:'#639922',expanded:false,tasks:[
-    {id:31,text:'UniBw München — application requirements',done:false},
-    {id:32,text:'Zeppelin University — program comparison',done:false},
-    {id:33,text:'Request academic transcripts',done:false},
-  ]},
-  {id:4,name:'Battalion admin & continuity',color:'#EF9F27',expanded:false,tasks:[
-    {id:41,text:'SgtMaj letter of continuity — draft review',done:false},
-    {id:42,text:'CIRRAS update to S3',done:true},
-    {id:43,text:'Submit travel request',done:false},
-  ]},
-];
+const DEFAULT_TASKS = [];
+const DEFAULT_PROJECTS = [];
 
 const TAG_LABELS = {w:'Work',p:'Personal',o:'Ops',a:'Admin'};
 const TAG_CLASSES = {w:'tag-w',p:'tag-p',o:'tag-o',a:'tag-a'};
@@ -573,11 +542,25 @@ function loadData(){
 function saveData(){
   setBadge('saving');
   try{
+    const now=new Date().toISOString();
+    // Rolling 3-snapshot local backup before overwriting
+    const prev=localStorage.getItem(PROJ_KEY);
+    if(prev){
+      const snap1=localStorage.getItem('dayplanner_snap1');
+      const snap2=localStorage.getItem('dayplanner_snap2');
+      if(snap1) localStorage.setItem('dayplanner_snap2',snap1);
+      if(snap2) localStorage.setItem('dayplanner_snap3',snap2);
+      localStorage.setItem('dayplanner_snap1',JSON.stringify({
+        tasks:JSON.parse(localStorage.getItem(TASK_KEY)||'{}').tasks||[],
+        projects:JSON.parse(prev).projects||[],
+        savedAt:localStorage.getItem('dayplanner_last_saved')||now
+      }));
+    }
     localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
     localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+    localStorage.setItem('dayplanner_last_saved', now);
     setBadge('saved');
   }catch(e){ setBadge('error'); }
-  // Also save to Drive if signed in (debounced)
   if(gcalToken) scheduleDriveSave();
 }
 
@@ -595,15 +578,20 @@ async function saveToDrive(){
   if(!gcalToken) return;
   try{
     const payload=getPayload();
+    // Save current as latest snapshot, shift previous snapshots down
+    const snap1=localStorage.getItem('dayplanner_snap1');
+    const snap2=localStorage.getItem('dayplanner_snap2');
+    if(snap1) localStorage.setItem('dayplanner_snap2',snap1);
+    if(snap2) localStorage.setItem('dayplanner_snap3',snap2);
+    localStorage.setItem('dayplanner_snap1',payload);
+
     if(driveFileId){
-      // Try to update existing file
       const res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+driveFileId+'?uploadType=media',{
         method:'PATCH',
         headers:{Authorization:'Bearer '+gcalToken,'Content-Type':'application/json'},
         body:payload
       });
       if(res.status===404){
-        // File deleted from Drive — clear cached ID and recreate
         driveFileId=null;
         localStorage.removeItem('dayplanner_drive_file_id');
         await saveToDrive();
@@ -611,7 +599,6 @@ async function saveToDrive(){
       }
       if(!res.ok){ console.error('Drive update failed:',res.status); return; }
     } else {
-      // Create new file in appDataFolder
       const meta={name:DRIVE_FILENAME,parents:['appDataFolder']};
       const form=new FormData();
       form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
@@ -632,17 +619,15 @@ async function loadFromDrive(){
   if(!gcalToken) return;
   setBadge('syncing');
   try{
-    // Always search by name — don't rely solely on cached ID
     const search=await fetch(
-      'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22'+DRIVE_FILENAME+'%22&fields=files(id,modifiedTime)&orderBy=modifiedTime+desc',
+      'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D%22'+DRIVE_FILENAME+'%22&fields=files(id,name,modifiedTime)&orderBy=modifiedTime+desc',
       {headers:{Authorization:'Bearer '+gcalToken}}
     );
     if(!search.ok){ setBadge('saved'); return; }
     const sdata=await search.json();
     const files=sdata.files||[];
-    if(!files.length){ setBadge('saved'); return; } // no cloud data yet — first time on this device
+    if(!files.length){ setBadge('saved'); return; }
 
-    // Use the most recently modified file
     driveFileId=files[0].id;
     localStorage.setItem('dayplanner_drive_file_id',driveFileId);
 
@@ -650,18 +635,42 @@ async function loadFromDrive(){
       headers:{Authorization:'Bearer '+gcalToken}
     });
     if(!res.ok){ setBadge('saved'); return; }
-
     const d=await res.json();
-    if(d.tasks&&Array.isArray(d.tasks)){
-      tasks=d.tasks; nextTaskId=d.nextTaskId||nextTaskId;
-    }
-    if(d.projects&&Array.isArray(d.projects)){
-      projects=d.projects; nextProjId=d.nextProjId||nextProjId; nextPtId=d.nextPtId||nextPtId;
+    if(!d.tasks&&!d.projects){ setBadge('saved'); return; }
+
+    // Check if local has meaningful data
+    const localHasData=projects.length>0||tasks.length>0;
+    const driveHasData=(d.projects&&d.projects.length>0)||(d.tasks&&d.tasks.length>0);
+
+    if(localHasData && driveHasData){
+      const localSaved=localStorage.getItem('dayplanner_last_saved')||'unknown';
+      const driveSaved=d.savedAt||files[0].modifiedTime||'unknown';
+      const localDate=localSaved!=='unknown'?new Date(localSaved).toLocaleString():'unknown';
+      const driveDate=driveSaved!=='unknown'?new Date(driveSaved).toLocaleString():'unknown';
+      const localCount=(projects.length)+' projects, '+(tasks.length)+' tasks';
+      const driveCount=((d.projects||[]).length)+' projects, '+((d.tasks||[]).length)+' tasks';
+
+      const choice=confirm(
+        'Which data do you want to keep?\n\n' +
+        'LOCAL (this device):\n  '+localCount+'\n  Last saved: '+localDate+'\n\n'+
+        'DRIVE (cloud):\n  '+driveCount+'\n  Last saved: '+driveDate+'\n\n'+
+        'OK = Keep Drive data\nCancel = Keep local data (and overwrite Drive)'
+      );
+
+      if(!choice){
+        // Keep local — push it to Drive
+        await saveToDrive();
+        setBadge('cloud');
+        return;
+      }
     }
 
-    // Mirror to localStorage so offline access works
+    // Apply Drive data
+    if(d.tasks&&Array.isArray(d.tasks)){ tasks=d.tasks; nextTaskId=d.nextTaskId||nextTaskId; }
+    if(d.projects&&Array.isArray(d.projects)){ projects=d.projects; nextProjId=d.nextProjId||nextProjId; nextPtId=d.nextPtId||nextPtId; }
     localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
     localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+    localStorage.setItem('dayplanner_last_saved', d.savedAt||new Date().toISOString());
     setBadge('cloud');
     renderTasks(); renderProjects(); buildTodayTimeline();
     if(currentView==='week') buildWeekView();
@@ -1611,6 +1620,43 @@ function deleteProject(id){ if(!confirm('Delete this project and all its tasks?'
 function showNewProjForm(){ document.getElementById('new-proj-form').classList.add('open'); document.getElementById('nf-name').focus(); }
 function hideNewProjForm(){ document.getElementById('new-proj-form').classList.remove('open'); document.getElementById('nf-name').value=''; document.getElementById('nf-due').value=''; }
 function createProject(){ const name=document.getElementById('nf-name').value.trim(); if(!name)return; const color=document.getElementById('nf-color').value; const due=document.getElementById('nf-due').value||null; projects.unshift({id:nextProjId++,name,color,status:'active',expanded:true,due,tasks:[]}); hideNewProjForm(); renderProjects(); saveData(); }
+
+function restoreFromSnapshot(){
+  const snaps=[];
+  for(let i=1;i<=3;i++){
+    try{
+      const s=localStorage.getItem('dayplanner_snap'+i);
+      if(s){ const d=JSON.parse(s); snaps.push({n:i,d}); }
+    }catch(e){}
+  }
+  if(!snaps.length){ alert('No local backups found.'); return; }
+
+  const msg=snaps.map(s=>{
+    const dt=s.d.savedAt?new Date(s.d.savedAt).toLocaleString():'unknown time';
+    const pc=(s.d.projects||[]).length+' projects, '+(s.d.tasks||[]).length+' tasks';
+    return 'Backup '+s.n+': '+pc+'\n  Saved: '+dt;
+  }).join('\n\n');
+
+  const choice=prompt(
+    'Available local backups:\n\n'+msg+'\n\nEnter backup number to restore (1 = most recent):',
+    '1'
+  );
+  if(!choice) return;
+  const n=parseInt(choice);
+  const snap=snaps.find(s=>s.n===n);
+  if(!snap){ alert('Invalid selection.'); return; }
+  if(!confirm('Restore backup '+n+'? This will overwrite your current data.')) return;
+
+  const d=snap.d;
+  if(d.tasks&&Array.isArray(d.tasks)) tasks=d.tasks;
+  if(d.projects&&Array.isArray(d.projects)) projects=d.projects;
+  localStorage.setItem(TASK_KEY, JSON.stringify({tasks, nextId:nextTaskId}));
+  localStorage.setItem(PROJ_KEY, JSON.stringify({projects, nextProjId, nextPtId}));
+  renderTasks(); renderProjects(); buildTodayTimeline();
+  if(gcalToken) scheduleDriveSave();
+  setBadge('saved');
+  alert('Backup '+n+' restored.');
+}
 
 // ─── Google Calendar OAuth ────────────────────────────────────────────────────
 function updateCalBadge(state){
